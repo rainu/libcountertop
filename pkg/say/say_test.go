@@ -1,6 +1,9 @@
 package say
 
 import (
+	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -104,5 +107,73 @@ func TestUntranslatedReportsWhatIsLeft(t *testing.T) {
 func TestEnglishIsOfferedFirst(t *testing.T) {
 	if got := Languages(); len(got) == 0 || got[0] != "en" {
 		t.Errorf("the languages are %v", got)
+	}
+}
+
+
+func TestGermanCatalogueIsCompleteAndSelectable(t *testing.T) {
+	t.Cleanup(func() { Use(English.String()) })
+	if got := Name("de"); got != "Deutsch" {
+		t.Fatalf("German language name is %q, want Deutsch", got)
+	}
+	if got := Use("de"); got != "de" {
+		t.Fatalf("German was not selected: got %q", got)
+	}
+	if got := T("settings.title"); got != "Einstellungen" {
+		t.Errorf("German settings title is %q", got)
+	}
+	for _, tag := range []string{"en", "it", "vi", "de"} {
+		if !slices.Contains(Languages(), tag) {
+			t.Errorf("language %q is missing from the selector", tag)
+		}
+	}
+	left, err := Untranslated("de")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 0 {
+		t.Fatalf("German catalogue is missing %d English identifiers, e.g. %v", len(left), left[:min(5, len(left))])
+	}
+	englishRaw, err := files.ReadFile("messages/en.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	germanRaw, err := files.ReadFile("messages/de.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	english, err := read(englishRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	german, err := read(germanRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	variables := regexp.MustCompile("{{\\\\.[^{}]+}}")
+	for id, source := range english {
+		want := variables.FindAllString(source, -1)
+		got := variables.FindAllString(german[id], -1)
+		sort.Strings(want)
+		sort.Strings(got)
+		if !slices.Equal(want, got) {
+			t.Errorf("%s placeholders are %v, want %v", id, got, want)
+		}
+	}
+}
+
+func TestEnglishItalianAndVietnameseRemainSelectable(t *testing.T) {
+	t.Cleanup(func() { Use(English.String()) })
+	for _, tc := range []struct{ tag, title string }{
+		{"en", "Settings"},
+		{"it", "Impostazioni"},
+		{"vi", "Cài đặt"},
+	} {
+		if got := Use(tc.tag); got != tc.tag {
+			t.Errorf("selecting %s settled on %s", tc.tag, got)
+		}
+		if got := T("settings.title"); got != tc.title {
+			t.Errorf("%s settings title is %q, want %q", tc.tag, got, tc.title)
+		}
 	}
 }
