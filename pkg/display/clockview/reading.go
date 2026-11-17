@@ -2,6 +2,7 @@ package clockview
 
 import (
 	"fmt"
+	"github.com/ygelfand/libcountertop/pkg/say"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ func (r Reading) share(n float32) float32 {
 }
 
 func Read(at time.Time, twentyFour bool) Reading {
-	r := Reading{Date: at.Format("Monday, 2 January"), Second: at.Second()}
+	r := Reading{Date: say.Date(at, say.T("date.layout")), Second: at.Second()}
 
 	if twentyFour {
 		r.Time = at.Format("15:04")

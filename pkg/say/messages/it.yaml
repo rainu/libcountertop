@@ -1869,3 +1869,48 @@ frontend.entity.password: Password amministratore
 access.group.frontend: Accesso web
 access.setting.password: Password amministratore
 microphone.setting.mute_sound: Suono microfono disattivato
+
+date:
+  layout: "Monday, 2 January"
+  weekday:
+    sunday: "domenica"
+    monday: "lunedì"
+    tuesday: "martedì"
+    wednesday: "mercoledì"
+    thursday: "giovedì"
+    friday: "venerdì"
+    saturday: "sabato"
+  weekday_short:
+    sunday: "dom"
+    monday: "lun"
+    tuesday: "mar"
+    wednesday: "mer"
+    thursday: "gio"
+    friday: "ven"
+    saturday: "sab"
+  month:
+    january: "gennaio"
+    february: "febbraio"
+    march: "marzo"
+    april: "aprile"
+    may: "maggio"
+    june: "giugno"
+    july: "luglio"
+    august: "agosto"
+    september: "settembre"
+    october: "ottobre"
+    november: "novembre"
+    december: "dicembre"
+  month_short:
+    january: "gen"
+    february: "feb"
+    march: "mar"
+    april: "apr"
+    may: "mag"
+    june: "giu"
+    july: "lug"
+    august: "ago"
+    september: "set"
+    october: "ott"
+    november: "nov"
+    december: "dic"
