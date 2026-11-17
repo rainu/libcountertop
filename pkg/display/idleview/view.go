@@ -229,6 +229,7 @@ func Areas(w, h, n int) []ui.Rect {
 
 func Reading(cfg Settings, at time.Time) clockview.Reading {
 	r := clockview.Read(at, cfg.Screen.Hours == config.TwentyFourHour)
+	r.Date = cfg.Clock.FormatDate(at)
 	if !cfg.Clock.Date {
 		r = r.Undated()
 	}

@@ -1914,3 +1914,13 @@ date:
     october: "Oct"
     november: "Nov"
     december: "Dec"
+
+clock.date_format: "Date format"
+clock.date_pattern: "Custom date pattern"
+clock.date_pattern.hint: "Use dd.MM.yyyy; tokens: yyyy yy MMMM MMM MM M dd d EEEE EEE. Quote literal text."
+clock.date_format.default: "Language default"
+clock.date_format.custom: "Custom"
+
+clock.setting.date_format: Date format
+clock.setting.date_pattern: Custom date pattern
+clock.example.date_pattern: dd.MM.yyyy

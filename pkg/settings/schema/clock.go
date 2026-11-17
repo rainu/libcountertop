@@ -9,7 +9,9 @@ import (
 type Clock struct {
 	Face Face `json:"face"`
 
-	Date bool `json:"date"`
+	Date        bool       `json:"date"`
+	DateFormat  DateFormat `json:"date_format"`
+	DatePattern string     `json:"date_pattern"`
 
 	Placement
 

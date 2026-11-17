@@ -213,7 +213,9 @@ func TestEveryEntityTakesACommand(t *testing.T) {
 			if v.OnCommand == nil {
 				t.Errorf("%s takes no command", v.ObjectID)
 			}
-		case *esphome.Switch:
+		case *esphome.Text:
+ if v.OnCommand == nil { t.Errorf("%s takes no command", v.ObjectID) }
+case *esphome.Switch:
 			if v.OnCommand == nil {
 				t.Errorf("%s takes no command", v.ObjectID)
 			}
@@ -221,4 +223,16 @@ func TestEveryEntityTakesACommand(t *testing.T) {
 			t.Errorf("%T is neither a select nor a switch", e)
 		}
 	}
+}
+
+func TestDateSettingsStayIndependentAndRejectBadPatterns(t *testing.T) {
+ d:=dash(t)
+ if err:=d.Change("date_pattern","dd.MM.yyyy");err!=nil {t.Fatal(err)}
+ if err:=d.Change("date_format","custom");err!=nil {t.Fatal(err)}
+ d.SetDate(false)
+ if d.clock().DateFormat!="custom"||d.clock().DatePattern!="dd.MM.yyyy"||d.clock().Date {t.Fatal("date controls are coupled")}
+ if err:=d.Change("date_pattern","YYYY-MM-DD");err==nil {t.Fatal("invalid pattern accepted")}
+ if d.clock().DatePattern!="dd.MM.yyyy" {t.Fatal("invalid write changed saved pattern")}
+ d.SetDate(true)
+ if d.clock().DatePattern!="dd.MM.yyyy" {t.Fatal("toggle lost custom pattern")}
 }

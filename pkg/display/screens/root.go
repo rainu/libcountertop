@@ -228,6 +228,7 @@ func (a *App) nativeDash(w *gogui.Window, vw, vh, top, margin int, pal theme.The
 	cfg := a.o.Settings()
 	ink := cfg.Clock.Ink.Over(pal)
 	r := clockview.Read(time.Now(), cfg.Screen.Hours == schema.TwentyFourHour)
+	r.Date = cfg.Clock.FormatDate(time.Now())
 	if !cfg.Clock.Date {
 		r = r.Undated()
 	}
