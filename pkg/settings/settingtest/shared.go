@@ -75,6 +75,8 @@ var Shared = Coverage{
 		"Clock.Size":                "clock.size",
 		"Clock.Ink":                 "clock.color",
 		"Clock.Backing":             "clock.backing",
+		"Clock.DateFormat":          "clock.date_format",
+		"Clock.DatePattern":         "clock.date_pattern",
 		"Clock.Date":                "clock.date",
 		"Idle.After":                "idle.after",
 		"Idle.Media":                "idle.media",

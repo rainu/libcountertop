@@ -55,11 +55,15 @@ func TestEntitiesKeepTheirIdentity(t *testing.T) {
 		"clock_color",
 		"clock_backing",
 		"clock_date",
+		"clock_date_format",
+		"clock_date_pattern",
 	}
 	for i, entity := range c.Entities() {
 		var base *esphome.Base
 		switch e := entity.(type) {
 		case *esphome.Select:
+			base = &e.Base
+		case *esphome.Text:
 			base = &e.Base
 		case *esphome.Switch:
 			base = &e.Base

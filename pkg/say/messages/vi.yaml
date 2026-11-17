@@ -1887,3 +1887,13 @@ date:
     october: "thg 10"
     november: "thg 11"
     december: "thg 12"
+
+clock.date_format: "Date format"
+clock.date_pattern: "Custom date pattern"
+clock.date_pattern.hint: "Example: dd.MM.yyyy"
+clock.date_format.default: "Language default"
+clock.date_format.custom: "Custom"
+
+clock.setting.date_format: Date format
+clock.setting.date_pattern: Custom date pattern
+clock.example.date_pattern: dd.MM.yyyy

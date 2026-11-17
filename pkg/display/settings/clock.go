@@ -19,6 +19,8 @@ type ClockController interface {
 	SetInk(config.Ink)
 	SetBacking(config.Backing)
 	SetDate(bool)
+	SetDateFormat(config.DateFormat)
+	SetDatePattern(string)
 }
 type ClockDependencies struct {
 	Preferences Preferences
@@ -74,6 +76,12 @@ func (p *ClockPages) Page() *shell.Page {
 				)),
 				func(int) { p.options.Controller.SetDate(!cfg.Clock.Date) },
 			)
+			rows = append(rows,
+				menu.Row{Label: say.T("clock.date_format"), Kind: menu.Chevron, Value: cfg.Clock.DateFormat.Label()},
+				menu.Row{Label: say.T("clock.date_pattern"), Hint: say.T("clock.date_pattern.hint"), Kind: menu.Field, Value: cfg.Clock.DatePattern, Save: p.options.Controller.SetDatePattern})
+			taps = append(taps, p.open(Choose(say.T("clock.date_format"), config.DateFormats(),
+				func() config.DateFormat { return p.options.Preferences.ClockState().Clock.DateFormat },
+				p.options.Controller.SetDateFormat, nil)), nil)
 			return rows, taps
 		},
 	}

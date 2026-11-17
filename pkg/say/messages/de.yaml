@@ -1915,3 +1915,13 @@ date:
     december: "Dez."
 
 keyboard.full_width: Volle Breite
+
+clock.date_format: "Datumsformat"
+clock.date_pattern: "Eigenes Datumsmuster"
+clock.date_pattern.hint: "Beispiel: dd.MM.yyyy"
+clock.date_format.default: "Sprachstandard"
+clock.date_format.custom: "Benutzerdefiniert"
+
+clock.setting.date_format: Datumsformat
+clock.setting.date_pattern: Eigenes Datumsmuster
+clock.example.date_pattern: dd.MM.yyyy
