@@ -1918,7 +1918,7 @@ keyboard.full_width: Volle Breite
 
 clock.date_format: "Datumsformat"
 clock.date_pattern: "Eigenes Datumsmuster"
-clock.date_pattern.hint: "Beispiel dd.MM.yyyy; Zeichen: yyyy yy MMMM MMM MM M dd d EEEE EEE. Text in einfache Anführungszeichen setzen."
+clock.date_pattern.hint: "Beispiel: dd.MM.yyyy"
 clock.date_format.default: "Sprachstandard"
 clock.date_format.custom: "Benutzerdefiniert"
 
