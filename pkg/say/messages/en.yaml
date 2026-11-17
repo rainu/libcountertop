@@ -1870,3 +1870,48 @@ frontend.entity.password: Admin password
 access.group.frontend: Web access
 access.setting.password: Admin password
 microphone.setting.mute_sound: Mute sound
+
+date:
+  layout: "Monday, 2 January"
+  weekday:
+    sunday: "Sunday"
+    monday: "Monday"
+    tuesday: "Tuesday"
+    wednesday: "Wednesday"
+    thursday: "Thursday"
+    friday: "Friday"
+    saturday: "Saturday"
+  weekday_short:
+    sunday: "Sun"
+    monday: "Mon"
+    tuesday: "Tue"
+    wednesday: "Wed"
+    thursday: "Thu"
+    friday: "Fri"
+    saturday: "Sat"
+  month:
+    january: "January"
+    february: "February"
+    march: "March"
+    april: "April"
+    may: "May"
+    june: "June"
+    july: "July"
+    august: "August"
+    september: "September"
+    october: "October"
+    november: "November"
+    december: "December"
+  month_short:
+    january: "Jan"
+    february: "Feb"
+    march: "Mar"
+    april: "Apr"
+    may: "May"
+    june: "Jun"
+    july: "Jul"
+    august: "Aug"
+    september: "Sep"
+    october: "Oct"
+    november: "Nov"
+    december: "Dec"
