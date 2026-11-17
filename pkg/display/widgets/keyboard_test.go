@@ -48,3 +48,23 @@ func TestKeyboardQRUsesAnIconAndALargerPanel(t *testing.T) {
 		check(&layout)
 	}
 }
+
+func TestFullWidthKeyboardUsesViewportAndGrowsHeight(t *testing.T) {
+	for _, screen := range [][2]int{{1280, 800}, {800, 480}, {720, 1152}} {
+		gui.SimpleWindow("keyboard", screen[0], screen[1], &struct{}{}, func(*gui.Window) {})
+		high, unit, gap, pad := keyboardGeometry(float32(screen[0]), KeyboardFullWidth)
+		used := 10*unit + 9*gap + 2*pad
+		if delta := used - float32(screen[0]); delta < -0.01 || delta > 0.01 {
+			t.Fatalf("%v: key row uses %v pixels", screen, used)
+		}
+		if high <= 0 || 4*high+3*gap+2.5*pad > float32(screen[1]) {
+			t.Fatalf("%v: keyboard does not fit vertically", screen)
+		}
+		if screen[0] == 1280 {
+			large, _, _, _ := keyboardGeometry(float32(screen[0]), KeyboardLarge)
+			if high <= large {
+				t.Fatal("full width must grow key height on Athena")
+			}
+		}
+	}
+}
