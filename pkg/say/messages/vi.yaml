@@ -1842,3 +1842,48 @@ frontend.entity.password: Mật khẩu quản trị
 access.group.frontend: Truy cập web
 access.setting.password: Mật khẩu quản trị
 microphone.setting.mute_sound: Âm thanh tắt tiếng
+
+date:
+  layout: "Monday, 2 January"
+  weekday:
+    sunday: "Chủ nhật"
+    monday: "Thứ hai"
+    tuesday: "Thứ ba"
+    wednesday: "Thứ tư"
+    thursday: "Thứ năm"
+    friday: "Thứ sáu"
+    saturday: "Thứ bảy"
+  weekday_short:
+    sunday: "CN"
+    monday: "T2"
+    tuesday: "T3"
+    wednesday: "T4"
+    thursday: "T5"
+    friday: "T6"
+    saturday: "T7"
+  month:
+    january: "tháng 1"
+    february: "tháng 2"
+    march: "tháng 3"
+    april: "tháng 4"
+    may: "tháng 5"
+    june: "tháng 6"
+    july: "tháng 7"
+    august: "tháng 8"
+    september: "tháng 9"
+    october: "tháng 10"
+    november: "tháng 11"
+    december: "tháng 12"
+  month_short:
+    january: "thg 1"
+    february: "thg 2"
+    march: "thg 3"
+    april: "thg 4"
+    may: "thg 5"
+    june: "thg 6"
+    july: "thg 7"
+    august: "thg 8"
+    september: "thg 9"
+    october: "thg 10"
+    november: "thg 11"
+    december: "thg 12"
