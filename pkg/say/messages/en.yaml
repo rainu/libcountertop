@@ -665,6 +665,7 @@ keyboard.compact: Compact
 keyboard.enter: Enter
 keyboard.hide: Hide
 keyboard.large: Large
+keyboard.full_width: Full width
 keyboard.refresh: Refresh
 keyboard.save: Save
 keyboard.search: Search
