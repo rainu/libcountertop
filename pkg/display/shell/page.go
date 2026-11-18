@@ -74,10 +74,12 @@ type Feed struct {
 }
 
 type Action struct {
-	Label string
-	Glyph string
-	Role  Role
-	Do    func()
+	// MinHeight optionally enlarges this touch target in UI pixels. Zero retains the default.
+	MinHeight float32
+	Label     string
+	Glyph     string
+	Role      Role
+	Do        func()
 }
 
 type Role int
