@@ -168,6 +168,15 @@ func NewWithStreamID(
 	report func(webrtc.PeerConnectionState),
 	streamID string,
 ) (*Link, error) {
+	return newLink(m, report, streamID, true)
+}
+
+// NewAudioOnly negotiates a thin audio peer without a data channel. Control is
+// owned by the caller's separately authenticated signaling transport.
+func NewAudioOnly(m Media, report func(webrtc.PeerConnectionState)) (*Link, error) {
+	return newLink(m, report, "voice", false)
+}
+func newLink(m Media, report func(webrtc.PeerConnectionState), streamID string, data bool) (*Link, error) {
 	built, err := api()
 	if err != nil {
 		return nil, err
@@ -208,7 +217,7 @@ func NewWithStreamID(
 			webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
 		)
 	}
-	if err == nil {
+	if err == nil && data {
 		negotiated, id := true, uint16(0)
 		l.talk, err = pc.CreateDataChannel(
 			"status",
@@ -219,12 +228,14 @@ func NewWithStreamID(
 		_ = l.Close()
 		return nil, err
 	}
-	l.talk.OnOpen(func() {
-		if m.Opened != nil {
-			m.Opened()
-		}
-	})
-	l.talk.OnMessage(l.heard)
+	if l.talk != nil {
+		l.talk.OnOpen(func() {
+			if m.Opened != nil {
+				m.Opened()
+			}
+		})
+		l.talk.OnMessage(l.heard)
+	}
 	pc.OnTrack(
 		func(t *webrtc.TrackRemote, r *webrtc.RTPReceiver) { l.worker(func() { l.receive(t, r) }) },
 	)
@@ -283,7 +294,7 @@ func (l *Link) Sending() bool { return l.video != nil && !l.blind.Load() }
 var ErrNotOpen = errors.New("rtc: data channel not open")
 
 func (l *Link) Send(kind string, v any) error {
-	if l.talk.ReadyState() != webrtc.DataChannelStateOpen {
+	if l.talk == nil || l.talk.ReadyState() != webrtc.DataChannelStateOpen {
 		return ErrNotOpen
 	}
 	data, err := json.Marshal(v)

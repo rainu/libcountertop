@@ -42,6 +42,11 @@ type GatedSwitch interface {
 }
 
 type AssistantDependencies struct {
+	// ConversationRows extends the existing slot page. Replacing the pipeline
+	// affects presentation only; callers remain responsible for exclusive routing.
+	ConversationRows func(slot int) ([]menu.Row, []func(int), bool)
+	LocalWordRow     func(slot int) (menu.Row, func(int), bool)
+
 	Slots       int
 	Pryon       Switch
 	PryonStop   GatedSwitch
@@ -250,7 +255,7 @@ func (p *AssistantPages) Slot(slot int) *shell.Page {
 
 			word, choose := p.wordRow(slot)
 			assistant, pick := p.pipelineRow(slot)
-			return []menu.Row{
+			rows := []menu.Row{
 				{Label: say.T("assistants.talk"), Hint: say.T("assistants.talk.hint")},
 
 				word,
@@ -284,7 +289,8 @@ func (p *AssistantPages) Slot(slot int) *shell.Page {
 					Kind:  menu.Toggle,
 					On:    saved.WakeScreen,
 				},
-			}, []func(int){
+			}
+			acts := []func(int){
 				func(int) { p.options.Requested.Emit(slot) },
 				choose,
 				pick,
@@ -294,11 +300,27 @@ func (p *AssistantPages) Slot(slot int) *shell.Page {
 				nil,
 				p.wakeScreen(slot, !saved.WakeScreen),
 			}
+			if extend := p.options.ConversationRows; extend != nil {
+				extra, taps, replace := extend(slot)
+				end := 2
+				if replace {
+					end = 3
+				}
+				rows = append(append(append([]menu.Row{}, rows[:2]...), extra...), rows[end:]...)
+				acts = append(append(append([]func(int){}, acts[:2]...), taps...), acts[end:]...)
+			}
+			return rows, acts
 		},
 	}
 }
 
 func (p *AssistantPages) wordRow(slot int) (menu.Row, func(int)) {
+	if local := p.options.LocalWordRow; local != nil {
+		if row, tap, ok := local(slot); ok {
+			return row, tap
+		}
+	}
+
 	row := menu.Row{Label: say.T("assistants.word"), Kind: menu.Chevron, Value: p.Listening(slot)}
 	if !p.picks() {
 		row.Dim, row.Hint = true, say.T("assistants.word.ha")
