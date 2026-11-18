@@ -2016,3 +2016,9 @@ clawtalk.caption_hint: "Mới nhất trước · văn bản nhận dạng, khôn
 clawtalk.mic_live: "Micrô: đang thu âm thanh"
 clawtalk.mic_wait: "Micrô: đang chờ âm thanh"
 clawtalk.mic_off: "Micrô: không thu âm thanh"
+
+clawtalk.configure_target: "Chọn OpenClaw làm đích giọng nói trong cài đặt của trợ lý này."
+clawtalk.history_local: "Lịch sử hiển thị cục bộ"
+clawtalk.delete_one: "Xóa lịch sử này"
+clawtalk.delete_all: "Xóa tất cả lịch sử"
+clawtalk.delete_hint: "Chỉ xóa văn bản trên Echo này. Hội thoại trên Gateway vẫn được giữ lại. Lịch sử đang hoạt động đã xóa sẽ ẩn cho đến lần kích hoạt tiếp theo."

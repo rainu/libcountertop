@@ -2043,3 +2043,9 @@ clawtalk.caption_hint: "Più recenti prima · testo riconosciuto, non una regist
 clawtalk.mic_live: "Microfono: acquisizione audio"
 clawtalk.mic_wait: "Microfono: in attesa di audio"
 clawtalk.mic_off: "Microfono: acquisizione disattivata"
+
+clawtalk.configure_target: "Seleziona OpenClaw come destinazione vocale nelle impostazioni di questo assistente."
+clawtalk.history_local: "Cronologia locale sul display"
+clawtalk.delete_one: "Elimina questa cronologia"
+clawtalk.delete_all: "Elimina tutte le cronologie"
+clawtalk.delete_hint: "Rimuove solo i testi su questo Echo. Le conversazioni nel Gateway restano invariate. Una cronologia attiva eliminata rimane nascosta fino alla prossima attivazione."
