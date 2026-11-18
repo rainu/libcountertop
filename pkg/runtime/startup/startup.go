@@ -171,6 +171,7 @@ func Display(progress []Progress) []Progress {
 		"chromecast":    11,
 		"api":           12,
 		"homeassistant": 13,
+		"openclaw":      14,
 	}
 	slices.SortStableFunc(out, func(a, b Progress) int {
 		ai, ok := order[a.Name]
@@ -199,6 +200,7 @@ func Display(progress []Progress) []Progress {
 		"chromecast":    "Chromecast",
 		"api":           "Home Assistant API",
 		"homeassistant": "Home Assistant",
+		"openclaw":      "OpenClaw",
 	}
 	for i := range out {
 		if name, ok := names[out[i].Name]; ok {

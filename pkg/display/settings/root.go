@@ -16,6 +16,7 @@ import (
 
 type Section struct {
 	Label, Glyph string
+	Picture      gogui.View
 	Page         func() shell.View
 }
 type NetworkName interface{ Network() string }
@@ -93,6 +94,7 @@ func RootPage(o RootDependencies) *shell.Page {
 		if o.Sections != nil {
 			for _, s := range o.Sections() {
 				add(s.Glyph, s.Label, "", s.Page)
+				rows[len(rows)-1].Picture = s.Picture
 			}
 		}
 		add(
