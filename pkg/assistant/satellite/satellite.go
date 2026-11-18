@@ -44,6 +44,10 @@ type Player interface {
 }
 
 type Options struct {
+	// Route consumes an activation before the Home Assistant pipeline starts.
+	Route         func(slot int, heard bool) bool
+	StopAlternate func() bool
+
 	Slots   int
 	Initial []string
 	Timers  Timers
@@ -54,6 +58,7 @@ type Options struct {
 }
 
 type Satellite struct {
+	routeMu   sync.Mutex
 	vs        *esphome.VoiceSatellite
 	turn      *turn.Conversation
 	selection wakeslots.Selection
@@ -100,9 +105,23 @@ func (s *Satellite) Ready() bool { return s.vs.Subscribed() }
 
 func (s *Satellite) Turn() *turn.Conversation { return s.turn }
 
-func (s *Satellite) Start(slot int) { s.turn.Start(slot) }
+func (s *Satellite) Start(slot int) {
+	s.routeMu.Lock()
+	defer s.routeMu.Unlock()
+	if s.options.Route != nil && s.options.Route(slot, false) {
+		return
+	}
+	s.turn.Start(slot)
+}
 
-func (s *Satellite) Heard(slot int) { s.turn.Heard(slot) }
+func (s *Satellite) Heard(slot int) {
+	s.routeMu.Lock()
+	defer s.routeMu.Unlock()
+	if s.options.Route != nil && s.options.Route(slot, true) {
+		return
+	}
+	s.turn.Heard(slot)
+}
 
 func (s *Satellite) AfterTurn(fn func()) {
 	var (
@@ -134,7 +153,7 @@ func (s *Satellite) Action() {
 	}
 
 	// Home Assistant runs the first pipeline for a wake that reports no phrase.
-	s.turn.Start(0)
+	s.Start(0)
 }
 
 func (s *Satellite) ActionHold(slot int) {
@@ -144,7 +163,7 @@ func (s *Satellite) ActionHold(slot int) {
 		}
 		return
 	}
-	s.turn.Start(slot)
+	s.Start(slot)
 }
 
 func (s *Satellite) alarmRinging() bool {
@@ -152,6 +171,10 @@ func (s *Satellite) alarmRinging() bool {
 }
 
 func (s *Satellite) Interrupt() {
+	if s.options.StopAlternate != nil && s.options.StopAlternate() {
+		return
+	}
+
 	if s.turn.Phase() == turn.Listening {
 		slog.Debug("stop word ignored, the turn is listening")
 		return
@@ -166,6 +189,10 @@ func (s *Satellite) Interrupt() {
 }
 
 func (s *Satellite) Stop() bool {
+	if s.options.StopAlternate != nil && s.options.StopAlternate() {
+		return true
+	}
+
 	if s.options.Alarms != nil && s.options.Alarms.Stop() {
 		return true
 	}
