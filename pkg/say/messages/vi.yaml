@@ -2022,3 +2022,7 @@ clawtalk.history_local: "Lịch sử hiển thị cục bộ"
 clawtalk.delete_one: "Xóa lịch sử này"
 clawtalk.delete_all: "Xóa tất cả lịch sử"
 clawtalk.delete_hint: "Chỉ xóa văn bản trên Echo này. Hội thoại trên Gateway vẫn được giữ lại. Lịch sử đang hoạt động đã xóa sẽ ẩn cho đến lần kích hoạt tiếp theo."
+
+clawtalk.tone_preview: "Nghe thử"
+clawtalk.tone_use: "Dùng âm này"
+clawtalk.tone_preview_hint: "Nghe thử không lưu và không bắt đầu hội thoại. Chỉ dùng khi không có hội thoại đang hoạt động; Không có sẽ im lặng."

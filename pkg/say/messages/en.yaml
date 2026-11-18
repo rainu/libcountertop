@@ -2050,3 +2050,7 @@ clawtalk.history_local: "Local display history"
 clawtalk.delete_one: "Delete this history"
 clawtalk.delete_all: "Delete all histories"
 clawtalk.delete_hint: "Removes only text cached on this Echo. Gateway conversations remain unchanged. A deleted active history stays hidden until the next activation."
+
+clawtalk.tone_preview: "Preview"
+clawtalk.tone_use: "Use this tone"
+clawtalk.tone_preview_hint: "Preview does not save or start a conversation. Available outside active conversations; Off stays silent."

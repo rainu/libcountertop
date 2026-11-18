@@ -2049,3 +2049,7 @@ clawtalk.history_local: "Cronologia locale sul display"
 clawtalk.delete_one: "Elimina questa cronologia"
 clawtalk.delete_all: "Elimina tutte le cronologie"
 clawtalk.delete_hint: "Rimuove solo i testi su questo Echo. Le conversazioni nel Gateway restano invariate. Una cronologia attiva eliminata rimane nascosta fino alla prossima attivazione."
+
+clawtalk.tone_preview: "Ascolta anteprima"
+clawtalk.tone_use: "Usa questo suono"
+clawtalk.tone_preview_hint: "L’anteprima non salva e non avvia una conversazione. Disponibile fuori dalle conversazioni attive; Nessuno resta silenzioso."
