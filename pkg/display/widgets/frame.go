@@ -139,7 +139,7 @@ func (kit *Toolkit) ActionBar(w *gogui.Window, actions []shell.Action, pal theme
 		cfg := gogui.ContainerCfg{
 			ID:      fmt.Sprintf("action-%d", i),
 			Width:   KeyWidth(w, a.Label, st, tall) + tall,
-			Height:  tall,
+			Height:  max(tall, a.MinHeight),
 			Sizing:  gogui.FixedFixed,
 			Radius:  gogui.RadiusLarge,
 			HAlign:  gogui.HAlignCenter,
