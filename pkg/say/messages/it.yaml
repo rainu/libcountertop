@@ -2034,3 +2034,12 @@ clawtalk.model_hint: "Usa il modello predefinito del Gateway o scegli un modello
 clawtalk.start_tone: "Suono iniziale"
 clawtalk.end_tone: "Suono finale"
 clawtalk.default_tone: "Predefinito"
+
+clawtalk.history: "Cronologia conversazioni"
+clawtalk.caption_user: "Tu"
+clawtalk.caption_assistant: "Assistente"
+clawtalk.caption_empty: "Nessuna voce riconosciuta"
+clawtalk.caption_hint: "Più recenti prima · testo riconosciuto, non una registrazione audio"
+clawtalk.mic_live: "Microfono: acquisizione audio"
+clawtalk.mic_wait: "Microfono: in attesa di audio"
+clawtalk.mic_off: "Microfono: acquisizione disattivata"

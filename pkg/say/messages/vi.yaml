@@ -2007,3 +2007,12 @@ clawtalk.model_hint: "Dùng mặc định của Gateway hoặc chọn mô hình 
 clawtalk.start_tone: "Âm báo bắt đầu"
 clawtalk.end_tone: "Âm báo kết thúc"
 clawtalk.default_tone: "Mặc định"
+
+clawtalk.history: "Lịch sử hội thoại"
+clawtalk.caption_user: "Bạn"
+clawtalk.caption_assistant: "Trợ lý"
+clawtalk.caption_empty: "Chưa nhận dạng được lời nói"
+clawtalk.caption_hint: "Mới nhất trước · văn bản nhận dạng, không ghi âm"
+clawtalk.mic_live: "Micrô: đang thu âm thanh"
+clawtalk.mic_wait: "Micrô: đang chờ âm thanh"
+clawtalk.mic_off: "Micrô: không thu âm thanh"

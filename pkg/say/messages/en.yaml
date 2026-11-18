@@ -2035,3 +2035,12 @@ clawtalk.model_hint: "Use the Gateway default or choose a native Live model from
 clawtalk.start_tone: "Start tone"
 clawtalk.end_tone: "End tone"
 clawtalk.default_tone: "Default"
+
+clawtalk.history: "Conversation history"
+clawtalk.caption_user: "You"
+clawtalk.caption_assistant: "Assistant"
+clawtalk.caption_empty: "No recognized speech yet"
+clawtalk.caption_hint: "Newest first · recognized text, not an audio recording"
+clawtalk.mic_live: "Microphone: capturing audio"
+clawtalk.mic_wait: "Microphone: waiting for audio"
+clawtalk.mic_off: "Microphone: not capturing"
