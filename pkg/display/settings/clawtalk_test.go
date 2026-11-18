@@ -30,3 +30,23 @@ func TestAlternateConversationRowsReplaceOnlySelectedSlotsPipeline(t *testing.T)
 		}
 	}
 }
+
+func TestNativeFeedbackHidesOnlySelectedSlotsHAFeedback(t *testing.T) {
+	p, _ := thresholds()
+	p.options.OwnsFeedback = func(slot int) bool { return slot == 0 }
+	for slot := 0; slot < 2; slot++ {
+		rows, acts := p.Slot(slot).Build()
+		if len(rows) != len(acts) {
+			t.Fatal("feedback row/action alignment")
+		}
+		found := false
+		for _, row := range rows {
+			if row.Label == say.T("assistants.tone") || row.Label == say.T("assistants.reply") {
+				found = true
+			}
+		}
+		if found != (slot == 1) {
+			t.Fatal("HA feedback hidden for wrong slot")
+		}
+	}
+}

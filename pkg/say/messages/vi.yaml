@@ -2003,3 +2003,7 @@ clawtalk.device_context: "Hội thoại trên Echo này"
 clawtalk.model: "Mô hình giọng nói"
 clawtalk.gateway_default: "Mặc định Gateway"
 clawtalk.model_hint: "Dùng mặc định của Gateway hoặc chọn mô hình Live gốc từ danh mục hiện tại."
+
+clawtalk.start_tone: "Âm báo bắt đầu"
+clawtalk.end_tone: "Âm báo kết thúc"
+clawtalk.default_tone: "Mặc định"

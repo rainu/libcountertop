@@ -2031,3 +2031,7 @@ clawtalk.device_context: "Gespräch auf diesem Echo"
 clawtalk.model: "Sprachmodell"
 clawtalk.gateway_default: "Gateway-Standard"
 clawtalk.model_hint: "Gateway-Standard verwenden oder ein natives Live-Modell aus dem aktuellen Katalog wählen."
+
+clawtalk.start_tone: "Startton"
+clawtalk.end_tone: "Endton"
+clawtalk.default_tone: "Standard"

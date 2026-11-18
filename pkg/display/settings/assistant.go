@@ -46,6 +46,8 @@ type AssistantDependencies struct {
 	// affects presentation only; callers remain responsible for exclusive routing.
 	ConversationRows func(slot int) ([]menu.Row, []func(int), bool)
 	LocalWordRow     func(slot int) (menu.Row, func(int), bool)
+	// OwnsFeedback hides HA-only activation/delivery rows for alternate feedback.
+	OwnsFeedback func(slot int) bool
 
 	Slots       int
 	Pryon       Switch
@@ -299,6 +301,10 @@ func (p *AssistantPages) Slot(slot int) *shell.Page {
 				p.open(func() shell.View { return p.Delivery(slot) }),
 				nil,
 				p.wakeScreen(slot, !saved.WakeScreen),
+			}
+			if owns := p.options.OwnsFeedback; owns != nil && owns(slot) {
+				rows = append(rows[:4], rows[6:]...)
+				acts = append(acts[:4], acts[6:]...)
 			}
 			if extend := p.options.ConversationRows; extend != nil {
 				extra, taps, replace := extend(slot)
