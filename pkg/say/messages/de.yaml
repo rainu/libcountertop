@@ -2027,3 +2027,7 @@ clawtalk.state.ended: "Gespräch beendet"
 clawtalk.state.error: "OpenClaw-Gespräch fehlgeschlagen. Keine Umleitung zu Home Assistant."
 clawtalk.state.muted: "Mikrofon stumm — Gespräch beendet"
 clawtalk.device_context: "Gespräch auf diesem Echo"
+
+clawtalk.model: "Sprachmodell"
+clawtalk.gateway_default: "Gateway-Standard"
+clawtalk.model_hint: "Gateway-Standard verwenden oder ein natives Live-Modell aus dem aktuellen Katalog wählen."

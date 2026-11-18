@@ -1999,3 +1999,7 @@ clawtalk.state.ended: "Đã kết thúc hội thoại"
 clawtalk.state.error: "Hội thoại OpenClaw thất bại. Không chuyển sang Home Assistant."
 clawtalk.state.muted: "Micrô đã tắt — đã kết thúc hội thoại"
 clawtalk.device_context: "Hội thoại trên Echo này"
+
+clawtalk.model: "Mô hình giọng nói"
+clawtalk.gateway_default: "Mặc định Gateway"
+clawtalk.model_hint: "Dùng mặc định của Gateway hoặc chọn mô hình Live gốc từ danh mục hiện tại."

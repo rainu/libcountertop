@@ -2027,3 +2027,7 @@ clawtalk.state.ended: "Conversation ended"
 clawtalk.state.error: "OpenClaw conversation failed. No Home Assistant fallback was used."
 clawtalk.state.muted: "Microphone muted — conversation ended"
 clawtalk.device_context: "Echo conversation"
+
+clawtalk.model: "Voice model"
+clawtalk.gateway_default: "Gateway default"
+clawtalk.model_hint: "Use the Gateway default or choose a native Live model from its current catalogue."

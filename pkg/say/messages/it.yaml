@@ -2026,3 +2026,7 @@ clawtalk.state.ended: "Conversazione terminata"
 clawtalk.state.error: "Conversazione OpenClaw non riuscita. Nessun passaggio a Home Assistant."
 clawtalk.state.muted: "Microfono disattivato — conversazione terminata"
 clawtalk.device_context: "Conversazione su questo Echo"
+
+clawtalk.model: "Modello vocale"
+clawtalk.gateway_default: "Predefinito del Gateway"
+clawtalk.model_hint: "Usa il modello predefinito del Gateway o scegli un modello Live nativo dal catalogo attuale."
