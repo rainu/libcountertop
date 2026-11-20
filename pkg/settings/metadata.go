@@ -6,6 +6,7 @@ type Inspectable interface {
 	Metadata(name string) (Field, bool)
 	RawValue(name string) (string, error)
 	Validate(name, value string) error
+	ChangeRaw(name, value string) error
 }
 
 // Metadata does not read configuration or invoke any setting's Read callback.
@@ -43,4 +44,22 @@ func (c *Controls[T]) Validate(name, value string) error {
 	}
 	probe := c.Read()
 	return s.Write(&probe, value)
+}
+
+// ChangeRaw saves an already validated wire representation without translating
+// UI labels. A label can equal a different option's canonical wire value.
+func (c *Controls[T]) ChangeRaw(name, value string) error {
+	s, err := c.Table.Row(name)
+	if err != nil {
+		return err
+	}
+	probe := c.Read()
+	if err := s.Write(&probe, value); err != nil {
+		return err
+	}
+	if err := c.Save(s, value); err != nil {
+		return err
+	}
+	c.Publish()
+	return nil
 }

@@ -28,3 +28,18 @@ func TestMetadataNeverReadsConfigurationOrOtherFields(t *testing.T) {
 		t.Fatal("unknown admitted")
 	}
 }
+
+func TestRawChangeDoesNotInterpretWireValueAsALabel(t *testing.T) {
+	type cfg struct{ Value string }
+	at := cfg{Value: "first"}
+	c := &Controls[cfg]{
+		Table: NewTable("test", []Group{"test"}, []Setting[cfg]{
+			{Name: "mode", Kind: Choice, Group: "test", NoEntity: true, Options: []Option{{Value: "first", Label: "second"}, {Value: "second", Label: "Other"}}, Read: func(c *cfg) string { return c.Value }, Write: func(c *cfg, v string) error { c.Value = v; return nil }},
+		}, Messages{}),
+		Read: func() cfg { return at },
+		Save: func(s Setting[cfg], v string) error { return s.Write(&at, v) },
+	}
+	if err := c.ChangeRaw("mode", "second"); err != nil || at.Value != "second" {
+		t.Fatal("canonical value translated as label")
+	}
+}
