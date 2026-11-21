@@ -14,6 +14,8 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconAlarm, IconCode, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
+import { OpenClawIcon } from "./OpenClawIcon";
+import { OpenClaw } from "./OpenClaw";
 import { Alarms } from "./Alarms";
 import { Broadcast } from "./Broadcast";
 import { Call } from "./Call";
@@ -41,6 +43,7 @@ const voices = "voices";
 const developer = "developer";
 
 export const appPages = [
+  { slug: "openclaw", label: "OpenClaw", icon: OpenClawIcon },
   { slug: alarms, label: "Alarms", icon: IconAlarm },
   { slug: calls, label: "Call", icon: IconPhone },
   { slug: broadcast, label: "Broadcast", icon: IconSpeakerphone },
@@ -277,6 +280,8 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
             change={change}
             extra={current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
           />
+        ) : app === "openclaw" ? (
+          <OpenClaw onSignedOut={signedOut} />
         ) : app === alarms ? (
           <Alarms onSignedOut={signedOut} />
         ) : app === calls ? (

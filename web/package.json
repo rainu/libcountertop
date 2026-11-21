@@ -6,7 +6,8 @@
     "test": "node --import ./tests/tsx.mjs --test tests/*.test.jsx",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node tests/openclaw.e2e.mjs"
   },
   "dependencies": {
     "@mantine/core": "^9.7.3",
