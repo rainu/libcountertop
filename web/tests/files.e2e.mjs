@@ -15,7 +15,8 @@ const server=createServer(async(req,res)=>{
   else if(at==="/settings"||at==="/entities")data=[];
   else if(at==="/events"){res.setHeader("Content-Type","text/event-stream");res.end('data: {"type":"states","states":[]}\n\n');return;}
   else if(deny){status=401;}
-  else if(at==="/files")data={files:[...files].map(([name,b])=>({name,size:b.length,modified:"2026-01-01T00:00:00Z"})),usedBytes:[...files.values()].reduce((n,b)=>n+b.length,0),availableBytes:536870912,budgetBytes:536870912,maxFileBytes:134217728,maxFiles:256};
+  else if(at==="/filesystem") { const dir=new URL(req.url,"http://localhost").searchParams.get("path"); data={path:dir,parent:dir==="/"?"":"/",entries:[]}; }
+  else if(at==="/files")data={directory:"/data/misc/echolocal/user-files",files:[...files].map(([name,b])=>({name,size:b.length,modified:"2026-01-01T00:00:00Z"})),usedBytes:[...files.values()].reduce((n,b)=>n+b.length,0),availableBytes:536870912,budgetBytes:536870912,maxFileBytes:134217728,maxFiles:256};
   else if(at.startsWith("/files/")){
    const name=decodeURIComponent(at.slice(7));
    if(method==="PUT"){
@@ -36,14 +37,14 @@ try {
  const page=await browser.newPage({viewport:{width:1200,height:950},acceptDownloads:true});
  page.on("pageerror",e=>errors.push(e.message));
  const origin="http://127.0.0.1:"+server.address().port;
- await page.goto(origin+"/#files");await page.getByText("No files yet.").waitFor();
+ await page.goto(origin+"/#files");await page.getByRole("tab",{name:"Uploads",exact:true}).click();await page.getByText("No files yet.").waitFor();
  const payload=Buffer.from([0,255,1,2,3,10,0,42]);
  await page.getByLabel("Choose file").setInputFiles({name:"asset.txt",mimeType:"application/octet-stream",buffer:payload});
  await page.getByRole("button",{name:"Upload",exact:true}).click();
  await page.getByRole("cell",{name:"asset.txt",exact:true}).waitFor();assert.deepEqual(files.get("asset.txt"),payload);
  assert.match(await page.getByRole("status").innerText(),/Upload complete/);
  const dlEvent=page.waitForEvent("download");await page.getByRole("link",{name:"Download",exact:true}).click();const dl=await dlEvent;assert.deepEqual(await readFile(await dl.path()),payload);
- await page.reload();await page.getByRole("cell",{name:"asset.txt",exact:true}).waitFor();
+ await page.reload();await page.getByRole("tab",{name:"Uploads",exact:true}).click();await page.getByRole("cell",{name:"asset.txt",exact:true}).waitFor();
  await page.getByLabel("Choose file").setInputFiles({name:"asset.txt",mimeType:"application/octet-stream",buffer:Buffer.from("replacement")});
  await page.getByRole("button",{name:"Upload",exact:true}).click();await page.getByRole("alert").filter({hasText:"already exists"}).waitFor();assert.deepEqual(files.get("asset.txt"),payload);
  failure="storage_full";

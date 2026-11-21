@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Button, Group, Paper, Progress, ScrollArea, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Button, Group, Paper, Progress, ScrollArea, Stack, Table, Tabs, Text, Title } from "@mantine/core";
+import { FileSystemBrowser } from "./FileSystemBrowser";
 import { SignedOut } from "./api";
+import { bytes } from "./fileSize";
 
 type FileInfo = { name: string; size: number; modified: string };
-type View = { files: FileInfo[]; usedBytes: number; availableBytes: number; budgetBytes: number; maxFileBytes: number; maxFiles: number };
-export const bytes = (n: number) => n < 1024 ? `${n} B` : `${(n / 1048576).toFixed(1)} MiB`;
+type View = { directory?: string; files: FileInfo[]; usedBytes: number; availableBytes: number; budgetBytes: number; maxFileBytes: number; maxFiles: number };
+export { bytes } from "./fileSize";
 const base = "/api/v1/files";
 const messages: Record<string, string> = {
  incomplete_upload: "The transfer was incomplete. No partial file was published; retry the upload.",
@@ -94,6 +96,11 @@ export function Files({ onSignedOut }: { onSignedOut: (e: unknown) => void }) {
  };
  return <Stack gap="md">
   <Title order={2}>Files</Title>
+  <Tabs defaultValue="filesystem">
+   <Tabs.List><Tabs.Tab value="filesystem">Device filesystem</Tabs.Tab><Tabs.Tab value="uploads">Uploads</Tabs.Tab></Tabs.List>
+   <Tabs.Panel value="filesystem" pt="md"><FileSystemBrowser onSignedOut={onSignedOut} uploadsPath={view?.directory} /></Tabs.Panel>
+   <Tabs.Panel value="uploads" pt="md"><Stack gap="md">
+   {view?.directory && <Text size="sm">Actual upload directory: {view.directory}</Text>}
   <Text>Store and transfer local assets. Uploading does not display a picture, import an avatar, or install a tone. Only supported consumers can explicitly import files.</Text>
   {error && <Alert color="red" role="alert">{error}</Alert>}
   {notice && <Alert color="blue" role="status">{notice}</Alert>}
@@ -119,5 +126,7 @@ export function Files({ onSignedOut }: { onSignedOut: (e: unknown) => void }) {
    </Table.Tr>)}</Table.Tbody>
   </Table></ScrollArea>
   {view?.files.length === 0 && <Text c="dimmed">No files yet.</Text>}
+   </Stack></Tabs.Panel>
+  </Tabs>
  </Stack>;
 }
