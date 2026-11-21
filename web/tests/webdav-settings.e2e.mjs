@@ -16,6 +16,7 @@ const server=createServer(async(req,res)=>{
   else if(path==="/api/v1/settings")data=[{domain:"access",section_key:"settings.network",section:"Network",fields:[field(),{id:"frontend_password",name:"password",title:"Admin password",group:"Web access",kind:"secret",value:"set"}]}];
   else if(path==="/api/v1/entities")data=[];
   else if(path==="/api/v1/events"){res.setHeader("Content-Type","text/event-stream");res.end('data: {"type":"states","states":[]}\n\n');return;}
+  else if(path==="/api/v1/settings/access/webdav"&&req.method==="GET")data=field();
   else if(path==="/api/v1/settings/access/webdav"&&req.method==="PUT"){
    const chunks=[];for await(const b of req)chunks.push(b);
    const body=JSON.parse(Buffer.concat(chunks).toString());writes.push(body.value);
@@ -36,13 +37,13 @@ try{
  const toggle=page.locator("#f-frontend_webdav input");
  await toggle.waitFor({state:"attached"});
  assert(!(await toggle.isChecked()));
- await page.locator("#f-frontend_webdav").getByRole("switch").click();
+ await page.locator("#f-frontend_webdav").locator("label").first().click();
  await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input")?.checked===true);
  assert(enabled);assert.deepEqual(writes,["on"]);
  await page.reload();await toggle.waitFor({state:"attached"});assert(await toggle.isChecked());
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
- await page.locator("#f-frontend_webdav").getByRole("switch").click();
+ await page.locator("#f-frontend_webdav").locator("label").first().click();
  await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input")?.checked===false);
  assert(!enabled);assert.deepEqual(writes,["on","off"]);
  assert.equal(await page.locator("#f-frontend_password input").inputValue(),"");
