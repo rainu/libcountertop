@@ -757,10 +757,12 @@ export function OpenClaw({
             code = JSON.parse(e.message).error;
           } catch {}
         }
+        const description = code ? v?.labels["error." + code] : undefined;
         setError(
-          (v?.labels.error ??
-            "Configuration unavailable. Refresh and check the connection.") +
-            (code ? " (" + code + ")" : ""),
+          description ??
+            (v?.labels.error ??
+              "Configuration unavailable. Refresh and check the connection.") +
+              (code ? " (" + code + ")" : ""),
         );
       }
       throw e;
@@ -774,6 +776,39 @@ export function OpenClaw({
   useEffect(() => {
     void reload().catch(() => {});
   }, []);
+  useEffect(() => {
+    if (!["connection", "permissions", "diagnostics"].includes(tab)) return;
+    let disposed = false;
+    const tick = async () => {
+      try {
+        const live = await openclawRequest<View>("/status");
+        if (!disposed && live.connection)
+          setV((current) =>
+            current
+              ? {
+                  ...current,
+                  connection: {
+                    ...current.connection,
+                    ui: live.connection.ui,
+                    node: live.connection.node,
+                  },
+                  grantedScopes: live.grantedScopes,
+                  events: live.events,
+                }
+              : current,
+          );
+      } catch (e) {
+        if (!disposed && e instanceof SignedOut) onSignedOut(e);
+      }
+    };
+    const timer = window.setInterval(() => {
+      void tick();
+    }, 3000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [tab, onSignedOut]);
   if (!v)
     return (
       <Stack>
