@@ -391,8 +391,8 @@ func TestSettingsReadAndWriteThroughTheRegistry(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&f); err != nil {
 		t.Fatal(err)
 	}
-	if f.Value != settings.v.Password || f.Kind != "credential" {
-		t.Errorf("the password reads %+v, want the saved password as a credential", f)
+	if f.Value != "set" || f.Kind != "secret" {
+		t.Errorf("the password reads %+v, want only protected secret metadata", f)
 	}
 
 	resp = do(

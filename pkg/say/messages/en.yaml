@@ -2054,3 +2054,6 @@ clawtalk.delete_hint: "Removes only text cached on this Echo. Gateway conversati
 clawtalk.tone_preview: "Preview"
 clawtalk.tone_use: "Use this tone"
 clawtalk.tone_preview_hint: "Preview does not save or start a conversation. Available outside active conversations; Off stays silent."
+
+access.setting.webdav: Managed files via WebDAV (HTTPS)
+frontend.entity.webdav: Managed files via WebDAV (HTTPS)

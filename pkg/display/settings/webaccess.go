@@ -10,6 +10,11 @@ import (
 	"github.com/ygelfand/libcountertop/pkg/say"
 )
 
+// Optional capability keeps existing AdminPassword implementations compatible.
+type WebDAVAccess interface {
+	WebDAVEnabled() bool
+	SetWebDAV(bool) error
+}
 type CertificateStatus interface{ Says() string }
 
 type WebAccess struct {
@@ -41,6 +46,20 @@ func (w WebAccess) Page(address func() string) *shell.Page {
 				},
 			})
 			acts = append(acts, nil)
+		}
+		if a, ok := w.Admin.(WebDAVAccess); ok {
+			on := a.WebDAVEnabled()
+			rows = append(rows, menu.Row{
+				Glyph: "mdi:folder-network",
+				Label: say.T("access.setting.webdav"),
+				Kind:  menu.Toggle,
+				On:    on,
+			})
+			acts = append(acts, func(int) {
+				if err := a.SetWebDAV(!on); err != nil {
+					slog.Warn("saving WebDAV setting failed", "err", err)
+				}
+			})
 		}
 		if c := w.Certificate; c != nil {
 			rows = append(rows, menu.Row{

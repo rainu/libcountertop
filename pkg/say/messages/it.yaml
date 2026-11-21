@@ -2053,3 +2053,6 @@ clawtalk.delete_hint: "Rimuove solo i testi su questo Echo. Le conversazioni nel
 clawtalk.tone_preview: "Ascolta anteprima"
 clawtalk.tone_use: "Usa questo suono"
 clawtalk.tone_preview_hint: "L’anteprima non salva e non avvia una conversazione. Disponibile fuori dalle conversazioni attive; Nessuno resta silenzioso."
+
+access.setting.webdav: File gestiti tramite WebDAV (HTTPS)
+frontend.entity.webdav: File gestiti tramite WebDAV (HTTPS)
