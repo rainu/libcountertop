@@ -143,7 +143,7 @@ export function FileSystemBrowser({ onSignedOut, uploadsPath }: { onSignedOut: (
     {listing.nextOffset !== undefined && <Button variant="default" disabled={busy} onClick={() => setLocation({ path: listing.path, offset: listing.nextOffset! })}>Next page</Button>}
    </Group>
    {listing.limitReached && <Alert color="yellow">The 65,536-entry browsing limit has been reached. Enter a more specific directory path.</Alert>}
-   <Text size="sm" c="dimmed">Up to 256 entries per page, sorted within each page. Refresh after external changes.</Text>
+   <Text size="sm" c="dimmed">Directories first, then files; each group alphabetically sorted across all pages. Up to 256 entries per page. Refresh after external changes.</Text>
   </>}
  </Stack>;
 }

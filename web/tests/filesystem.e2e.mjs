@@ -9,7 +9,7 @@ const root = await mkdtemp(join(tmpdir(), "devicefs-ui-"));
 for (const name of ["assets", "dest", "system", "many"]) await mkdir(join(root, name));
 const systemBytes = Buffer.from([0, 255, 1, 42, 10]);
 await writeFile(join(root, "system", "version.bin"), systemBytes);
-await writeFile(join(root, "assets", "actual.txt"), "fixture only");
+await writeFile(join(root, "assets", "actual.txt"), Buffer.alloc(5120,42));
 await symlink("assets", join(root, "alias"));
 for (let i = 0; i < 270; i++) await writeFile(join(root, "many", "item-" + String(i).padStart(3, "0")), "");
 const dist = resolve(import.meta.dirname, "../../pkg/runtime/webui/dist");
@@ -44,16 +44,18 @@ const server = createServer(async (req, res) => {
     const absolute = await realpath(join(root, path));
     if (!(await lstat(absolute)).isDirectory()) return send(409, { error: "not_directory" });
     const canonical = "/" + relative(root, absolute);
-    const names = (await readdir(absolute)).sort(), entries = [];
-    for (const name of names.slice(offset, offset + 256)) {
+    const names = (await readdir(absolute)).sort(), allEntries = [];
+    for (const name of names) {
      const info = await lstat(join(absolute, name));
      let target = {};
      if (info.isSymbolicLink()) {
       const actual = await realpath(join(absolute, name)), targetInfo = await lstat(actual);
       target = { targetKind: targetInfo.isDirectory() ? "directory" : "file", targetPath: "/" + relative(root, actual) };
      }
-     entries.push({ name, kind: info.isSymbolicLink() ? "symlink" : info.isDirectory() ? "directory" : "file", size: info.size, modified: info.mtime.toISOString(), mode: info.isDirectory() ? "drwx------" : "-rw-------", ...target });
+     allEntries.push({ name, kind: info.isSymbolicLink() ? "symlink" : info.isDirectory() ? "directory" : "file", size: info.size, modified: info.mtime.toISOString(), mode: info.isDirectory() ? "drwx------" : "-rw-------", ...target });
     }
+    allEntries.sort((a,b) => { const af=a.kind==="directory"||a.targetKind==="directory",bf=b.kind==="directory"||b.targetKind==="directory"; if(af!==bf)return af?-1:1; const ak=a.name.toLowerCase(),bk=b.name.toLowerCase(); return ak<bk?-1:ak>bk?1:a.name<b.name?-1:a.name>b.name?1:0; });
+    const entries=allEntries.slice(offset,offset+256);
     return send(200, { path: canonical, parent: canonical === "/" ? "" : "/", entries, availableBytes: 536870912, maxUploadBytes: 134217728, capacityKnown: true, readOnly: canonical === "/system", ...(names.length > offset + 256 ? { nextOffset: offset + 256 } : {}) });
    } catch { return send(404, { error: "not_found" }); }
   }
@@ -71,6 +73,7 @@ try {
  await page.getByRole("button", { name: "alias/", exact: true }).click();
  await page.getByRole("cell", { name: "actual.txt", exact: true }).waitFor();
  assert.equal(await page.getByLabel("Directory path", { exact: true }).inputValue(), "/assets");
+ await page.getByRole("row").filter({hasText:"actual.txt"}).getByRole("cell",{name:"5.0 KiB",exact:true}).waitFor();
  await writeFile(join(root, "assets", "external.txt"), "outside UI");
  await page.getByRole("button", { name: "Refresh directories", exact: true }).click();
  await page.getByRole("cell", { name: "external.txt", exact: true }).waitFor();
