@@ -486,3 +486,18 @@ func TestEventsStartWithEveryStateThenFollow(t *testing.T) {
 		t.Errorf("second message %+v, want the ringing state", next)
 	}
 }
+
+func TestPageHEADRetainsOwnerAuthentication(t *testing.T) {
+	_, settings, _, srv := fixture(t)
+	response := do(t, http.MethodHead, srv.URL+Prefix+"/echo/a1", "", nil)
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Fatal("unauthenticated HEAD", response.StatusCode)
+	}
+	response.Body.Close()
+	response = do(t, http.MethodHead, srv.URL+Prefix+"/echo/a1", "", func(r *http.Request) { r.SetBasicAuth("admin", settings.v.Password) })
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil || response.StatusCode != http.StatusOK || len(body) != 0 {
+		t.Fatal("authenticated HEAD", response.StatusCode, err)
+	}
+}
