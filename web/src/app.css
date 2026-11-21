@@ -647,3 +647,12 @@ img.ct-screen {
     background: var(--mantine-primary-color-light);
   }
 }
+
+.claw-config { max-width: 960px; }
+.claw-options { border: 0; padding: 0; margin: 0; min-width: 0; }
+.claw-field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; flex: 1; min-width: min(100%, 240px); }
+.claw-field input, .claw-field textarea, .claw-field select { width: 100%; padding: 10px; font: inherit; border: 1px solid var(--mantine-color-default-border); border-radius: 4px; color: var(--mantine-color-text); background: var(--mantine-color-body); }
+.claw-field textarea { resize: vertical; }
+.claw-field small { color: var(--mantine-color-dimmed); }
+.claw-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+.claw-config form > button { margin-top: 14px; }

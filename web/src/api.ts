@@ -278,3 +278,7 @@ export function fired(name: string, onData: (data: Record<string, string>) => vo
     socket?.close();
   };
 }
+
+export function openclawRequest<T>(path: string, method = "GET", body?: unknown) {
+ return call<T>("/openclaw"+path,{method, ...(body === undefined ? {} : {headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})});
+}
