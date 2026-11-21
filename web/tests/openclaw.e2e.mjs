@@ -183,7 +183,7 @@ try {
   assert.equal(v.slots[0].model, "native-test");
   assert.equal(v.slots[0].context, "agent:test:existing");
   await page.getByRole("button", { name: "Assistant 2", exact: true }).click();
-  assert.equal(await field("Timeout · Seconds").inputValue(), "300");
+  assert.equal(await field("Timeout · Seconds").inputValue(), "600");
   assert.ok(await field("Device context prompt").isDisabled());
   await page.getByRole("button", { name: "Assistant 1", exact: true }).click();
   await field("Device context prompt").fill("{{unknown}}");

@@ -91,7 +91,7 @@ export function viewFixture() {
     groups: ["settings", "audio"],
     slots: [
       { ...slot },
-      { ...slot, openclaw: false, agent: "", agentLabel: "", timeout: 300 },
+      { ...slot, openclaw: false, agent: "", agentLabel: "", timeout: 600 },
     ],
     tones: [
       { value: "", label: "Default tone" },

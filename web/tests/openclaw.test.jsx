@@ -82,3 +82,12 @@ test("permissions distinguish requested and granted scopes and retain every Node
     assert.ok(html.includes(name));
   assert.ok(appPages.some((p) => p.slug === "openclaw"));
 });
+
+test("valid persisted custom timeout remains visible outside the preset list", () => {
+  const v = viewFixture();
+  v.slots[0].timeout = 600;
+  const html = render(
+    <SlotForm v={v} index={0} run={run} reload={async () => {}} />,
+  );
+  assert.match(html, /value="600" selected=""/);
+});

@@ -125,7 +125,7 @@ function Select({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       >
-        {choices.map((c) => (
+        {optionList(choices, value).map((c) => (
           <option key={c.value} value={c.value}>
             {c.label}
           </option>
