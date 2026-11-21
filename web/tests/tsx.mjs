@@ -14,6 +14,10 @@ registerHooks({
     }
   },
   load(url, context, next) {
+    if (url.startsWith("file:") && url.endsWith(".svg")) {
+      const asset = "data:image/svg+xml;base64," + readFileSync(new URL(url)).toString("base64");
+      return { format: "module", source: "export default " + JSON.stringify(asset), shortCircuit: true };
+    }
     if (!url.startsWith("file:") || !/\.(tsx?|jsx)$/.test(url)) return next(url, context);
     const result = transformSync(new URL(url).pathname, readFileSync(new URL(url), "utf8"), { jsx: { runtime: "automatic" } });
     if (result.errors.length) throw new Error(JSON.stringify(result.errors));

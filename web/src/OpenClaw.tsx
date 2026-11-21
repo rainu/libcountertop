@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -369,7 +369,15 @@ export function SlotForm({
     [agents, setAgents] = useState<Choice[]>([]),
     [models, setModels] = useState<Choice[]>([]),
     [sessions, setSessions] = useState<Choice[]>([]),
-    [preview, setPreview] = useState("");
+    [preview, setPreview] = useState(""),
+    [audio, setAudio] = useState<{data: string; id: number} | null>(null);
+  const player = useRef<HTMLAudioElement>(null);
+  const audition = useRef(0);
+  useEffect(() => () => { audition.current++; }, []);
+  useEffect(() => {
+    const element = player.current;
+    return () => element?.pause();
+  }, [audio]);
   const choices = async (kind: string) => {
     const list = await run<Choice[]>(
       "/choices/" +
@@ -421,7 +429,7 @@ export function SlotForm({
           onChange={(value) => set("openclaw", value === "openclaw")}
         />
         <fieldset disabled={!s.openclaw} className="claw-options">
-          <Group align="end">
+          <Group align="end" className="claw-control-row">
             <Select
               label={l.agent}
               value={s.agent ?? ""}
@@ -448,7 +456,7 @@ export function SlotForm({
               {l.loadChoices}
             </Button>
           </Group>
-          <Group align="end">
+          <Group align="end" className="claw-control-row">
             <Select
               label={l.model}
               value={modelValue(s)}
@@ -486,7 +494,7 @@ export function SlotForm({
           </label>
           <Text size="sm">{l.resumeHint}</Text>
           {s.resume && (
-            <Group align="end">
+            <Group align="end" className="claw-control-row">
               <Select
                 label={l.session}
                 value={s.context ?? ""}
@@ -562,7 +570,7 @@ export function SlotForm({
           </Group>
           {preview && <pre className="claw-preview">{preview}</pre>}
           {(["startTone", "progressTone", "endTone"] as const).map((k, i) => (
-            <Group key={k} align="end">
+            <Group key={k} align="end" className="claw-control-row">
               <Select
                 label={l[k]}
                 value={s[k] ?? ""}
@@ -572,18 +580,24 @@ export function SlotForm({
               <Button
                 variant="light"
                 onClick={() =>
-                  attempt(() =>
-                    run("/preview", "POST", {
+                  attempt(async () => {
+                    const id = ++audition.current;
+                    player.current?.pause();
+                    setAudio(null);
+                    const result = await run<{audio: string}>("/preview", "POST", {
                       cue: ["ready", "progress", "end"][i],
                       choice: s[k] ?? "",
-                    }),
-                  )
+                    });
+                    if (id === audition.current) setAudio({data: result.audio, id});
+                  })
                 }
               >
                 {l.preview}
               </Button>
             </Group>
           ))}
+          {audio && <audio key={audio.id} ref={player} controls autoPlay
+            aria-label={l.preview} src={"data:audio/wav;base64," + audio.data} />}
           <Title order={4}>{l.ending}</Title>
           <Field label={l.phrase}>
             <input
@@ -649,7 +663,7 @@ function WakeForm({
         attempt(() => save(value));
       }}
     >
-      <Group align="end">
+      <Group align="end" className="claw-control-row">
         <Select
           label={label}
           value={value}

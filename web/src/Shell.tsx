@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconAlarm, IconCode, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
+import { OpenClawIcon } from "./OpenClawIcon";
 import { OpenClaw } from "./OpenClaw";
 import { Alarms } from "./Alarms";
 import { Broadcast } from "./Broadcast";
@@ -42,7 +43,7 @@ const voices = "voices";
 const developer = "developer";
 
 export const appPages = [
-  { slug: "openclaw", label: "OpenClaw", icon: IconCode },
+  { slug: "openclaw", label: "OpenClaw", icon: OpenClawIcon },
   { slug: alarms, label: "Alarms", icon: IconAlarm },
   { slug: calls, label: "Call", icon: IconPhone },
   { slug: broadcast, label: "Broadcast", icon: IconSpeakerphone },

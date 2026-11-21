@@ -33,6 +33,12 @@ const browser = await chromium.launch({
   args: ["--no-sandbox"],
 });
 const page = await browser.newPage({ viewport: { width: 1200, height: 950 } });
+const wav = Buffer.alloc(44 + 4800 * 2);
+wav.write("RIFF"); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
+wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32);
+wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(wav.length - 44, 40);
+for(let i=0;i<4800;i++) wav.writeInt16LE(Math.round(4000*Math.sin(2*Math.PI*440*i/24000)),44+i*2);
 let v = viewFixture(),
   writes = [],
   errors = [],
@@ -111,7 +117,10 @@ await page.route("**/api/v1/**", async (route) => {
     data = v;
     writes.push({ path, body });
   } else if (path === "/openclaw/preview")
-    data = { text: "Use synthetic node", bytes: 18, maxBytes: 1536 };
+    {
+    writes.push({path, body});
+    data = body.cue === "context" ? { text: "Use synthetic node", bytes: 18, maxBytes: 1536 } : {audio: wav.toString("base64")};
+  }
   else if (path === "/openclaw/history") data = [];
   else if (path === "/openclaw/actions") {
     writes.push({ path, body });
@@ -151,6 +160,33 @@ try {
   assert.equal(writes.at(-1).body.token, "");
 
   await page.getByRole("button", { name: "Assistant 1", exact: true }).click();
+  assert.ok(await page.locator('nav img[aria-hidden="true"]').count() > 0);
+  const aligned = async () => {
+    const rows = await page.locator(".claw-control-row").evaluateAll(rows => rows.map(row => {
+      const a=row.querySelector("select").getBoundingClientRect(), b=row.querySelector("button").getBoundingClientRect();
+      return Math.abs((a.top+a.height/2)-(b.top+b.height/2));
+    }));
+    assert.ok(rows.length >= 5);
+    assert.ok(rows.every(delta=>delta <= 1), JSON.stringify(rows));
+  };
+  await aligned();
+  for (let i=1;i<=3;i++) {
+    await page.getByRole("button", {name:"Preview",exact:true}).nth(i).click();
+    await page.locator("audio[controls]").waitFor();
+    await page.waitForFunction(()=>document.querySelector("audio").readyState>=2);
+    assert.equal(writes.at(-1).path,"/openclaw/preview");
+    assert.equal(writes.at(-1).body.cue,["ready","progress","end"][i-1]);
+    assert.ok(await page.locator("audio").evaluate(a=>a.src.startsWith("data:audio/wav;base64,")));
+    await page.locator("audio").evaluate(a=>a.play());
+    await page.waitForFunction(()=>document.querySelector("audio").ended);
+  }
+  await page.locator("audio").evaluate(a=>{a.loop=true;return a.play();});
+  await page.evaluate(()=>{window.previousAudition=document.querySelector("audio");});
+  await page.getByRole("button",{name:"Assistant 2",exact:true}).click();
+  await aligned();
+  assert.equal(await page.locator("audio").count(),0);
+  assert.ok(await page.evaluate(()=>window.previousAudition.paused));
+  await page.getByRole("button",{name:"Assistant 1",exact:true}).click();
   await field("Local wake word").selectOption("wake-b");
   await page
     .getByRole("button", { name: "Save · Local wake word", exact: true })
@@ -237,6 +273,10 @@ try {
   console.log(
     JSON.stringify({
       passed: [
+        "OpenClaw navigation icon",
+        "aligned controls in both assistant slots",
+        "browser audio decode/play/end for all three cues",
+        "audition cleanup on tab change",
         "write-only keep/replace/clear",
         "local wake selection",
         "per-slot persistence contract",

@@ -656,3 +656,9 @@ img.ct-screen {
 .claw-field small { color: var(--mantine-color-dimmed); }
 .claw-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
 .claw-config form > button { margin-top: 14px; }
+
+/* Align actions with the control, not the field label or its outer margins. */
+.claw-control-row > .claw-field { margin-bottom: 0; }
+.claw-control-row select { height: 44px; }
+.claw-control-row > button { height: 44px; }
+.claw-config audio { display: block; max-width: 100%; margin-top: 12px; }
