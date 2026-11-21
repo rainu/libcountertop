@@ -187,7 +187,7 @@ func (a *API) Routes() map[string]http.Handler {
 		if name == "desktop" {
 			inner = a.requireControl(http.StripPrefix(at, h))
 		}
-		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
+		for _, method := range []string{"GET", "HEAD", "POST", "PUT", "DELETE"} {
 			routes[method+" "+at] = inner
 			routes[method+" "+at+"/*"] = inner
 		}

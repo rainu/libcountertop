@@ -97,7 +97,7 @@ export function Files({ onSignedOut }: { onSignedOut: (e: unknown) => void }) {
  return <Stack gap="md">
   <Title order={2}>Files</Title>
   <Tabs defaultValue="filesystem">
-   <Tabs.List><Tabs.Tab value="filesystem">Device filesystem</Tabs.Tab><Tabs.Tab value="uploads">Uploads</Tabs.Tab></Tabs.List>
+   <Tabs.List><Tabs.Tab value="filesystem">Device filesystem</Tabs.Tab><Tabs.Tab value="uploads">Managed assets</Tabs.Tab></Tabs.List>
    <Tabs.Panel value="filesystem" pt="md"><FileSystemBrowser onSignedOut={onSignedOut} uploadsPath={view?.directory} /></Tabs.Panel>
    <Tabs.Panel value="uploads" pt="md"><Stack gap="md">
    {view?.directory && <Text size="sm">Actual upload directory: {view.directory}</Text>}
