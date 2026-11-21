@@ -42,7 +42,7 @@ export function FileSystemBrowser({ onSignedOut, uploadsPath }: { onSignedOut: (
  useEffect(() => { alive.current = true; return () => { alive.current = false; active.current?.abort(); }; }, []);
  useEffect(() => {
   const controller = new AbortController();
-  setLoading(true); setError(""); setListing(undefined);
+  setLoading(true); setError("");
   fetch("/api/v1/filesystem?" + new URLSearchParams({ path: location.path, offset: String(location.offset) }), { credentials: "same-origin", signal: controller.signal })
    .then(async (r) => {
     if (r.status === 401) throw new SignedOut();
@@ -57,7 +57,7 @@ export function FileSystemBrowser({ onSignedOut, uploadsPath }: { onSignedOut: (
  const current = listing?.path ?? location.path;
  const segments = current.split("/").filter(Boolean);
  const upload = () => {
-  if (!selected || !listing || busy) return;
+  if (!selected || !listing || busy || loading) return;
   setError(""); setNotice("");
   if (!destination.startsWith("/") || !filename || filename === "." || filename === ".." || /[/\\\x00-\x1f\x7f]/.test(filename)) { setError(errors.invalid_path); return; }
   if (selected.size > listing.maxUploadBytes) { setError(errors.file_too_large); return; }
@@ -118,7 +118,7 @@ export function FileSystemBrowser({ onSignedOut, uploadsPath }: { onSignedOut: (
     <Text size="sm" c="dimmed">Create-only; existing files are never overwritten. Up to {bytes(listing.maxUploadBytes)} per upload. System partitions are not remounted. Downloads have no upload-size limit.</Text>
     {listing.capacityKnown && <Text size="sm">{listing.readOnly ? "Current filesystem: read-only." : bytes(listing.availableBytes) + " available for uploads here after the free-space reserve."}</Text>}
     {busy && <><Progress value={progress} aria-label="Filesystem upload progress" /><Text role="status">{progress === 100 ? "Finalizing upload…" : "Uploading: " + progress + "%"}</Text></>}
-    <Group><Button disabled={!selected || !filename || busy} onClick={upload}>Upload to destination</Button>
+    <Group><Button disabled={!selected || !filename || busy || loading} onClick={upload}>Upload to destination</Button>
      {busy && <Button variant="default" onClick={() => active.current?.abort()}>Cancel filesystem upload</Button>}
     </Group>
    </Stack></Paper>
