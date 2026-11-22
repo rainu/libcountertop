@@ -36,6 +36,8 @@ try{
   await page.waitForFunction(()=>document.querySelector("#f-avatar_path input")?.value==="/data/local/tmp/custom.vrm");
   await page.reload();await input.waitFor();assert.equal(await input.inputValue(),"/data/local/tmp/custom.vrm");
   for(const width of [1280,640,390]){await page.setViewportSize({width,height:844});await page.waitForTimeout(80);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),"horizontal overflow "+lang+" "+width);assert(await page.getByRole("button",{name:words[lang].default,exact:true}).isVisible());}
+  // Reset also discards an uncommitted draft without a blur/save race.
+  await input.fill("/data/local/tmp/unsaved.vrm");
   await page.getByRole("button",{name:words[lang].default,exact:true}).click();
   await page.waitForFunction(()=>document.querySelector("#f-avatar_path input")?.value==="");
   assert.equal(value,"");await page.close();

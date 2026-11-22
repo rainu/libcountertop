@@ -38,7 +38,6 @@ export function Settings({ section, focus, change, extra }: Props) {
                     }
                   />
                   {field.help && <Text size="sm" c="dimmed" pb="sm" style={{ overflowWrap: "anywhere" }}>{field.help}</Text>}
-                  {field.kind === "text" && field.reset_label && <Button size="sm" variant="light" mb="sm" onClick={() => change(domain, field.name, "").catch((e: Error) => notifications.error(e.message))}>{field.reset_label}</Button>}
                   {domain === "access" && field.name === "webdav" && field.value === "on" && (
                     <Stack gap="xs" pb="md" data-testid="webdav-connection">
                       <TextInput label="WebDAV URL (HTTPS)" value={window.location.origin + "/api/v1/webdav/"} readOnly />
