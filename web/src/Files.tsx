@@ -5,16 +5,16 @@ import { SignedOut } from "./api";
 import { bytes } from "./fileSize";
 
 type FileInfo = { name: string; size: number; modified: string };
-type View = { directory?: string; files: FileInfo[]; usedBytes: number; availableBytes: number; budgetBytes: number; maxFileBytes: number; maxFiles: number };
+type View = { directory?: string; files: FileInfo[]; usedBytes: number; availableBytes: number; budgetBytes: number; maxFileBytes: number; maxFiles: number; entries?: number };
 export { bytes } from "./fileSize";
 const base = "/api/v1/files";
 const messages: Record<string, string> = {
  incomplete_upload: "The transfer was incomplete. No partial file was published; retry the upload.",
- invalid_name: "Use 1–128 ASCII letters, digits, spaces, dots, dashes or underscores; no leading dot or outer spaces.",
+ invalid_name: "Use valid UTF-8 names (up to 255 bytes per component). Traversal, control characters, backslashes and reserved internal names are not allowed.",
  already_exists: "That name already exists. Delete it explicitly or choose another name; files are never overwritten.",
  file_too_large: "The file exceeds the per-file limit.",
  storage_full: "Not enough capacity or too many files. Delete a file and retry.",
- transfer_busy: "Another upload is in progress. Retry when it finishes.",
+ transfer_busy: "Another managed-file write is in progress or a WebDAV lock protects this file. Retry after the write or lock ends.",
  unsafe_entry: "Storage contains an unsupported entry. Ask the owner to inspect it.",
  cross_origin: "Use the device's own HTTPS web interface.",
  length_required: "The upload needs a known content length.",
@@ -56,7 +56,7 @@ export function Files({ onSignedOut }: { onSignedOut: (e: unknown) => void }) {
   if (!selected || !view || busy) return;
   setError(""); setNotice("");
   if (selected.size > view.maxFileBytes) { setError(messages.file_too_large); return; }
-  if (selected.size > view.availableBytes || view.files.length >= view.maxFiles) { setError(messages.storage_full); return; }
+  if (selected.size > view.availableBytes || (view.entries ?? view.files.length) >= view.maxFiles) { setError(messages.storage_full); return; }
   const xhr = new XMLHttpRequest();
   active.current = xhr;
   setBusy(true); setProgress(0);
@@ -104,10 +104,10 @@ export function Files({ onSignedOut }: { onSignedOut: (e: unknown) => void }) {
   <Text>Store and transfer local assets. Uploading does not display a picture, import an avatar, or install a tone. Only supported consumers can explicitly import files.</Text>
   {error && <Alert color="red" role="alert">{error}</Alert>}
   {notice && <Alert color="blue" role="status">{notice}</Alert>}
-  {view && <Text>{bytes(view.usedBytes)} used of {bytes(view.budgetBytes)} · {bytes(view.availableBytes)} available · {view.files.length}/{view.maxFiles} files · {bytes(view.maxFileBytes)} per file</Text>}
+  {view && <Text>{bytes(view.usedBytes)} used of {bytes(view.budgetBytes)} · {bytes(view.availableBytes)} available · {view.entries ?? view.files.length}/{view.maxFiles} files and folders · {bytes(view.maxFileBytes)} per file</Text>}
   <Paper withBorder p="md"><Stack gap="sm">
    <input ref={input} type="file" aria-label="Choose file" disabled={busy} onChange={(e) => setSelected(e.target.files?.[0] ?? null)} />
-   <Text size="sm" c="dimmed">One upload at a time. Existing names are never overwritten. No folders or rename.</Text>
+   <Text size="sm" c="dimmed">Web uploads create new root-level files; existing names are not replaced. WebDAV clients can manage folders, rename, replace and lock files.</Text>
    {busy && active.current && <><Progress value={progress} aria-label="Upload progress" /><Text role="status">{progress === 100 ? "Finalizing upload…" : `Uploading: ${progress}%`}</Text></>}
    <Group><Button onClick={upload} disabled={!selected || !view || busy}>Upload</Button>
     {busy && active.current && <Button variant="default" onClick={() => active.current?.abort()}>Cancel upload</Button>}
