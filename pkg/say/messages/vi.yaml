@@ -2027,5 +2027,7 @@ clawtalk.tone_preview: "Nghe thử"
 clawtalk.tone_use: "Dùng âm này"
 clawtalk.tone_preview_hint: "Nghe thử không lưu và không bắt đầu hội thoại. Chỉ dùng khi không có hội thoại đang hoạt động; Không có sẽ im lặng."
 
-access.setting.webdav: Tệp được quản lý qua WebDAV (HTTPS)
-frontend.entity.webdav: Tệp được quản lý qua WebDAV (HTTPS)
+access.setting.webdav: Tệp thiết bị qua WebDAV (HTTPS)
+frontend.entity.webdav: Tệp thiết bị qua WebDAV (HTTPS)
+webaccess.webdav_address: Địa chỉ WebDAV
+webaccess.webdav_login: "Tên đăng nhập: owner · Mật khẩu quản trị EchoLocal"

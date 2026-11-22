@@ -155,6 +155,7 @@ func (a *API) Restore(c schema.Frontend) {
 func (a *API) Routes() map[string]http.Handler {
 	auth := func(h http.HandlerFunc) http.Handler { return a.require(h) }
 	routes := map[string]http.Handler{
+		"GET " + Prefix + "/webdav-info":              auth(a.webdavInfo),
 		"POST " + Prefix + "/login":                   http.HandlerFunc(a.login),
 		"POST " + Prefix + "/logout":                  http.HandlerFunc(a.logout),
 		"GET " + Prefix + "/logo/{tone}":              http.HandlerFunc(a.logo),

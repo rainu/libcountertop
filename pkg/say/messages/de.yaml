@@ -2055,5 +2055,7 @@ clawtalk.tone_preview: "Probehören"
 clawtalk.tone_use: "Diesen Ton übernehmen"
 clawtalk.tone_preview_hint: "Probehören speichert nichts und startet kein Gespräch. Nur außerhalb laufender Gespräche verfügbar; „Keiner“ bleibt stumm."
 
-access.setting.webdav: Verwaltete Dateien per WebDAV (HTTPS)
-frontend.entity.webdav: Verwaltete Dateien per WebDAV (HTTPS)
+access.setting.webdav: Gerätedateien per WebDAV (HTTPS)
+frontend.entity.webdav: Gerätedateien per WebDAV (HTTPS)
+webaccess.webdav_address: WebDAV-Adresse
+webaccess.webdav_login: "Benutzer: owner · EchoLocal-Adminpasswort"

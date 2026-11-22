@@ -3,6 +3,7 @@ package webapi
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/ygelfand/libcountertop/pkg/network/webaccess"
 	"net/http"
 	"sync"
 	"time"
@@ -93,4 +94,13 @@ func (a *API) requireDAV(h http.Handler) http.Handler {
 		}()
 		h.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (a *API) webdavInfo(w http.ResponseWriter, r *http.Request) {
+	enabled := a.WebDAVEnabled()
+	address := ""
+	if enabled && a.o.Address != nil {
+		address = webaccess.DAVURL(a.o.Address())
+	}
+	reply(w, map[string]any{"enabled": enabled, "url": address, "path": webaccess.DAVPath, "root": "/", "username": "owner"})
 }

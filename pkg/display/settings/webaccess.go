@@ -7,6 +7,7 @@ import (
 
 	"github.com/ygelfand/libcountertop/pkg/display/menu"
 	"github.com/ygelfand/libcountertop/pkg/display/shell"
+	"github.com/ygelfand/libcountertop/pkg/network/webaccess"
 	"github.com/ygelfand/libcountertop/pkg/say"
 )
 
@@ -60,6 +61,15 @@ func (w WebAccess) Page(address func() string) *shell.Page {
 					slog.Warn("saving WebDAV setting failed", "err", err)
 				}
 			})
+			if on {
+				url := webaccess.DAVURL(address())
+				if url == "" {
+					url = webaccess.DAVPath
+				}
+				rows = append(rows, menu.Row{Glyph: gogui.IconGlobe, Label: say.T("webaccess.webdav_address"), Hint: say.T("webaccess.webdav_login"), Kind: menu.Plain, Value: url})
+				acts = append(acts, nil)
+			}
+
 		}
 		if c := w.Certificate; c != nil {
 			rows = append(rows, menu.Row{

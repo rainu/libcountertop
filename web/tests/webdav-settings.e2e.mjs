@@ -6,7 +6,7 @@ import { resolve, extname } from "node:path";
 import { chromium } from "playwright";
 const dist=resolve(import.meta.dirname,"../../pkg/runtime/webui/dist");
 let enabled=false,deny=false;const writes=[],errors=[];
-const field=()=>({id:"frontend_webdav",name:"webdav",title:"Managed files via WebDAV (HTTPS)",group:"Web access",kind:"toggle",value:enabled?"on":"off"});
+const field=()=>({id:"frontend_webdav",name:"webdav",title:"Device files via WebDAV (HTTPS)",group:"Web access",kind:"toggle",value:enabled?"on":"off"});
 const server=createServer(async(req,res)=>{
  const path=new URL(req.url,"http://localhost").pathname;
  if(path.startsWith("/api/v1/")){
@@ -34,18 +34,26 @@ try{
  page.on("pageerror",e=>errors.push(e.message));
  const url="http://127.0.0.1:"+server.address().port+"/#network";
  await page.goto(url);
- const toggle=page.locator("#f-frontend_webdav input");
+ const toggle=page.locator("#f-frontend_webdav input[type=checkbox]");
  await toggle.waitFor({state:"attached"});
  assert(!(await toggle.isChecked()));
+ assert.equal(await page.getByTestId("webdav-connection").count(),0);
  await page.locator("#f-frontend_webdav").locator("label").first().click();
- await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input")?.checked===true);
+ await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input[type=checkbox]")?.checked===true);
  assert(enabled);assert.deepEqual(writes,["on"]);
+ const expectedURL="http://127.0.0.1:"+server.address().port+"/api/v1/webdav/";
+ assert.equal(await page.getByLabel("WebDAV URL (HTTPS)").inputValue(),expectedURL);
+ await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
+ await page.getByRole("button",{name:"Copy WebDAV URL"}).click();
+ assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),expectedURL);
  await page.reload();await toggle.waitFor({state:"attached"});assert(await toggle.isChecked());
  await page.setViewportSize({width:390,height:844});
+ await page.waitForFunction(()=>document.documentElement.scrollWidth<=window.innerWidth);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
  await page.locator("#f-frontend_webdav").locator("label").first().click();
- await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input")?.checked===false);
+ await page.waitForFunction(()=>document.querySelector("#f-frontend_webdav input[type=checkbox]")?.checked===false);
  assert(!enabled);assert.deepEqual(writes,["on","off"]);
+ assert.equal(await page.getByTestId("webdav-connection").count(),0);
  assert.equal(await page.locator("#f-frontend_password input").inputValue(),"");
  assert.deepEqual(errors,[]);
  console.log("PASS: WebDAV settings toggle, exact owner API writes, refresh, mobile layout and empty secret editor.");

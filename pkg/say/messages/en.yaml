@@ -2055,5 +2055,7 @@ clawtalk.tone_preview: "Preview"
 clawtalk.tone_use: "Use this tone"
 clawtalk.tone_preview_hint: "Preview does not save or start a conversation. Available outside active conversations; Off stays silent."
 
-access.setting.webdav: Managed files via WebDAV (HTTPS)
-frontend.entity.webdav: Managed files via WebDAV (HTTPS)
+access.setting.webdav: Device files via WebDAV (HTTPS)
+frontend.entity.webdav: Device files via WebDAV (HTTPS)
+webaccess.webdav_address: WebDAV address
+webaccess.webdav_login: "Username: owner · EchoLocal admin password"

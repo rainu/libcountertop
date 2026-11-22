@@ -38,3 +38,26 @@ func TestWebAccessDAVToggleUsesPersistedCapability(t *testing.T) {
 		t.Fatal("disable did not persist")
 	}
 }
+
+func TestWebAccessShowsURLOnlyWhenEnabled(t *testing.T) {
+	say.Use("en")
+	a := &davAdmin{}
+	p := (WebAccess{Admin: a}).Page(func() string { return "192.0.2.40" })
+	rows, _ := p.Build()
+	for _, r := range rows {
+		if r.Label == say.T("webaccess.webdav_address") {
+			t.Fatal("URL visible while disabled")
+		}
+	}
+	a.on = true
+	rows, _ = p.Build()
+	found := false
+	for _, r := range rows {
+		if r.Label == say.T("webaccess.webdav_address") {
+			found = r.Value == "https://192.0.2.40/api/v1/webdav/"
+		}
+	}
+	if !found {
+		t.Fatal("missing complete URL")
+	}
+}
