@@ -6,17 +6,19 @@ type FieldChoice struct {
 }
 
 type Field struct {
-	ID      string        `json:"id"`
-	Name    string        `json:"name"`
-	Title   string        `json:"title"`
-	Group   string        `json:"group"`
-	Kind    string        `json:"kind"`
-	Value   string        `json:"value"`
-	Example string        `json:"example,omitempty"`
-	Unit    string        `json:"unit,omitempty"`
-	Min     int           `json:"min,omitempty"`
-	Max     int           `json:"max,omitempty"`
-	Choices []FieldChoice `json:"choices,omitempty"`
+	Help       string        `json:"help,omitempty"`
+	ResetLabel string        `json:"reset_label,omitempty"`
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	Title      string        `json:"title"`
+	Group      string        `json:"group"`
+	Kind       string        `json:"kind"`
+	Value      string        `json:"value"`
+	Example    string        `json:"example,omitempty"`
+	Unit       string        `json:"unit,omitempty"`
+	Min        int           `json:"min,omitempty"`
+	Max        int           `json:"max,omitempty"`
+	Choices    []FieldChoice `json:"choices,omitempty"`
 }
 
 type Described interface {
@@ -35,9 +37,10 @@ func (c *Controls[T]) Fields() []Field {
 			Group:   c.Table.Title(s.Group),
 			Kind:    s.Kind.String(),
 			Example: s.Example(),
-			Unit:    s.Unit,
-			Min:     s.Min,
-			Max:     s.Max,
+			Help:    s.OptionalText("help"), ResetLabel: s.OptionalText("reset"),
+			Unit: s.Unit,
+			Min:  s.Min,
+			Max:  s.Max,
 		}
 		if s.Kind == Secret {
 			f.Value = s.Visible(&at)
