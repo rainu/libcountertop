@@ -37,6 +37,7 @@ export function Settings({ section, focus, change, extra }: Props) {
                       change(domain, field.name, v).catch((e: Error) => notifications.error(e.message))
                     }
                   />
+                  {field.help && <Text size="sm" c="dimmed" pb="sm" style={{ overflowWrap: "anywhere" }}>{field.help}</Text>}
                   {domain === "access" && field.name === "webdav" && field.value === "on" && (
                     <Stack gap="xs" pb="md" data-testid="webdav-connection">
                       <TextInput label="WebDAV URL (HTTPS)" value={window.location.origin + "/api/v1/webdav/"} readOnly />

@@ -496,3 +496,13 @@ func (m Messages) text(key string) string {
 	return m.Text(key)
 }
 func (m Messages) missing(key string) bool { return m.Missing == nil || m.Missing(key) }
+
+// OptionalText provides translated field guidance without imposing it on existing
+// controls. Reset text opts a text field into an explicit empty-value action.
+func (s Setting[T]) OptionalText(part string) string {
+	key := s.domain + "." + part + "." + s.Name
+	if s.messages.missing(key) {
+		return ""
+	}
+	return s.messages.text(key)
+}

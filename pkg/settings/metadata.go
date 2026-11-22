@@ -17,7 +17,7 @@ func (c *Controls[T]) Metadata(name string) (Field, bool) {
 	if !ok || s.Name != name {
 		return Field{}, false
 	}
-	f := Field{ID: s.Object(c.Table.Domain), Name: s.Name, Title: s.Title(), Group: c.Table.Title(s.Group), Kind: s.Kind.String(), Example: s.Example(), Unit: s.Unit, Min: s.Min, Max: s.Max}
+	f := Field{ID: s.Object(c.Table.Domain), Name: s.Name, Title: s.Title(), Group: c.Table.Title(s.Group), Kind: s.Kind.String(), Example: s.Example(), Help: s.OptionalText("help"), ResetLabel: s.OptionalText("reset"), Unit: s.Unit, Min: s.Min, Max: s.Max}
 	for _, o := range s.Choices() {
 		f.Choices = append(f.Choices, FieldChoice{Value: o.Value, Label: s.Label(o)})
 	}
