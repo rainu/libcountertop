@@ -7,9 +7,15 @@ import (
 
 	"github.com/ygelfand/libcountertop/pkg/display/menu"
 	"github.com/ygelfand/libcountertop/pkg/display/shell"
+	"github.com/ygelfand/libcountertop/pkg/network/webaccess"
 	"github.com/ygelfand/libcountertop/pkg/say"
 )
 
+// Optional capability keeps existing AdminPassword implementations compatible.
+type WebDAVAccess interface {
+	WebDAVEnabled() bool
+	SetWebDAV(bool) error
+}
 type CertificateStatus interface{ Says() string }
 
 type WebAccess struct {
@@ -41,6 +47,29 @@ func (w WebAccess) Page(address func() string) *shell.Page {
 				},
 			})
 			acts = append(acts, nil)
+		}
+		if a, ok := w.Admin.(WebDAVAccess); ok {
+			on := a.WebDAVEnabled()
+			rows = append(rows, menu.Row{
+				Glyph: "mdi:folder-network",
+				Label: say.T("access.setting.webdav"),
+				Kind:  menu.Toggle,
+				On:    on,
+			})
+			acts = append(acts, func(int) {
+				if err := a.SetWebDAV(!on); err != nil {
+					slog.Warn("saving WebDAV setting failed", "err", err)
+				}
+			})
+			if on {
+				url := webaccess.DAVURL(address())
+				if url == "" {
+					url = webaccess.DAVPath
+				}
+				rows = append(rows, menu.Row{Glyph: gogui.IconGlobe, Label: say.T("webaccess.webdav_address"), Hint: say.T("webaccess.webdav_login"), Kind: menu.Plain, Value: url})
+				acts = append(acts, nil)
+			}
+
 		}
 		if c := w.Certificate; c != nil {
 			rows = append(rows, menu.Row{

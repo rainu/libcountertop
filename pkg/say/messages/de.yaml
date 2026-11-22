@@ -2054,3 +2054,8 @@ clawtalk.delete_hint: "Entfernt nur die Texte auf diesem Echo. Gespräche im Gat
 clawtalk.tone_preview: "Probehören"
 clawtalk.tone_use: "Diesen Ton übernehmen"
 clawtalk.tone_preview_hint: "Probehören speichert nichts und startet kein Gespräch. Nur außerhalb laufender Gespräche verfügbar; „Keiner“ bleibt stumm."
+
+access.setting.webdav: Gerätedateien per WebDAV (HTTPS)
+frontend.entity.webdav: Gerätedateien per WebDAV (HTTPS)
+webaccess.webdav_address: WebDAV-Adresse
+webaccess.webdav_login: "Benutzer: owner · EchoLocal-Adminpasswort"

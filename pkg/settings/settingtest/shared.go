@@ -124,6 +124,7 @@ var Shared = Coverage{
 		"Certs.Cert":                "certs.cert",
 		"Certs.CertAPIKey":          "certs.cert_api_key",
 		"Certs.KeyAPIKey":           "certs.key_api_key",
+		"Frontend.WebDAV":           "access.webdav",
 		"Frontend.Password":         "access.password",
 		"Cameras.Tab":               "cameras.tab",
 		"Cameras.Scale":             "cameras.scale",
