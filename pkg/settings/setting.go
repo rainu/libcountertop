@@ -116,6 +116,9 @@ type Setting[T any] struct {
 
 	NoEntity bool
 
+	// FilePicker optionally describes a read-only device-file selector in owner UIs.
+	FilePicker func(*T) *FilePicker
+
 	Options []Option
 	More    func() []Option
 

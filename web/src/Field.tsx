@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { Button, Stack, Group, PasswordInput, Select, Slider, Switch, Text, TextInput } from "@mantine/core";
 import type { Field as FieldType } from "./api";
+import { DeviceFilePicker } from "./DeviceFilePicker";
 
-type Props = { field: FieldType; onChange: (value: string) => Promise<void> };
+type Props = { field: FieldType; onChange: (value: string) => Promise<void>; selectFile?: (value:string)=>Promise<void> };
 
-export function FieldRow({ field, onChange }: Props) {
+export function FieldRow({ field, onChange, selectFile }: Props) {
   const wide = field.kind === "number" || field.kind === "text" || field.kind === "secret" ||
     field.kind === "credential" ||
     field.kind === "list" || field.kind === "pair" || field.kind === "triple";
@@ -14,13 +15,13 @@ export function FieldRow({ field, onChange }: Props) {
         {field.title}
       </Text>
       <div style={{ flex: wide ? "0 1 320px" : "0 0 auto", minWidth: wide ? 160 : undefined }}>
-        <Control field={field} onChange={onChange} />
+        <Control field={field} onChange={onChange} selectFile={selectFile} />
       </div>
     </Group>
   );
 }
 
-function Control({ field, onChange }: Props) {
+function Control({ field, onChange, selectFile }: Props) {
   switch (field.kind) {
     case "toggle":
       return (
@@ -47,7 +48,7 @@ function Control({ field, onChange }: Props) {
     case "credential":
       return <Words field={field} onChange={onChange} masked />;
     default:
-      return <Words field={field} onChange={onChange} />;
+      return <Words field={field} onChange={onChange} selectFile={selectFile} />;
   }
 }
 
@@ -75,13 +76,14 @@ function Level({ field, onChange }: Props) {
   );
 }
 
-function Words({ field, onChange, secret, masked }: Props & { secret?: boolean; masked?: boolean }) {
+function Words({ field, onChange, selectFile, secret, masked }: Props & { secret?: boolean; masked?: boolean }) {
   const shown = secret ? "" : field.value;
   const [value, setValue] = useState(shown);
   useEffect(() => setValue(shown), [shown]);
   const pending = useRef(Promise.resolve());
-  const send = (v: string) => {
-    const next = pending.current.catch(() => {}).then(() => onChange(v));
+ const [picking,setPicking]=useState(false);
+  const send = (v: string, strict=false) => {
+    const next = pending.current.catch(() => {}).then(() => (strict ? selectFile ?? onChange : onChange)(v));
     pending.current = next;
     return next;
   };
@@ -101,6 +103,10 @@ function Words({ field, onChange, secret, masked }: Props & { secret?: boolean; 
   if (masked) return <PasswordInput {...props} />;
   return <Stack gap="xs">
     <TextInput {...props} />
+    {field.file_picker && <>
+     <Button fullWidth size="sm" variant="light" onMouseDown={e=>e.preventDefault()} styles={{label:{whiteSpace:"normal"}} style={{height:"auto",minHeight:36}} onClick={()=>setPicking(true)}>{field.file_picker.text.choose_image}</Button>
+     {picking&&<DeviceFilePicker config={field.file_picker} onClose={()=>setPicking(false)} onSelect={async name=>{await send(name,true);setValue(name);}} />}
+    </>}
     {field.reset_label && <Button fullWidth size="sm" variant="light" styles={{ label: { whiteSpace: "normal" } }} style={{ height: "auto", minHeight: 36 }} onMouseDown={(e) => e.preventDefault()} onClick={() => void send("").then(() => setValue(""))}>{field.reset_label}</Button>}
   </Stack>;
 }

@@ -1,6 +1,13 @@
 export type Choice = { value: string; label: string };
 
+export type DeviceFilePickerConfig = {
+ extensions: string[];
+ start_dir: string;
+ text: Record<string,string>;
+};
 export type Field = {
+ file_picker?: DeviceFilePickerConfig;
+
   id: string;
   name: string;
   title: string;

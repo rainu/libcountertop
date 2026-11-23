@@ -5,7 +5,16 @@ type FieldChoice struct {
 	Label string `json:"label"`
 }
 
+// FilePicker is presentation metadata, not authorization or a format validator.
+// Selection is submitted through the same setting parser as typed input.
+type FilePicker struct {
+	Extensions []string          `json:"extensions"`
+	StartDir   string            `json:"start_dir"`
+	Text       map[string]string `json:"text"`
+}
 type Field struct {
+	FilePicker *FilePicker `json:"file_picker,omitempty"`
+
 	Help       string        `json:"help,omitempty"`
 	ResetLabel string        `json:"reset_label,omitempty"`
 	ID         string        `json:"id"`
@@ -41,6 +50,9 @@ func (c *Controls[T]) Fields() []Field {
 			Unit: s.Unit,
 			Min:  s.Min,
 			Max:  s.Max,
+		}
+		if s.FilePicker != nil && s.Kind == Text {
+			f.FilePicker = s.FilePicker(&at)
 		}
 		if s.Kind == Secret {
 			f.Value = s.Visible(&at)

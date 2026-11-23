@@ -33,6 +33,7 @@ export function Settings({ section, focus, change, extra }: Props) {
                 <div id={`f-${field.id}`} className="ct-row" data-focus={focus === field.id || undefined}>
                   <FieldRow
                     field={field}
+                    selectFile={(v)=>change(domain,field.name,v)}
                     onChange={(v) =>
                       change(domain, field.name, v).catch((e: Error) => notifications.error(e.message))
                     }
