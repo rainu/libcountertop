@@ -58,7 +58,7 @@ export function DeviceFilePicker({ config, onClose, onSelect }: Props) {
      {!loading&&entries.map(e=>{
       const directory=e.kind==="directory"||e.targetKind==="directory";
       const name=(listing!.path==="/"?"/":listing!.path+"/")+e.name;
-      return <Button key={e.name} fullWidth justify="flex-start" variant="subtle" disabled={busy} styles={{label:{whiteSpace:"normal",overflowWrap:"anywhere"}} style={{height:"auto",minHeight:44}} onClick={()=>{if(directory)go(name);else void choose(name);}}>{e.name}{directory?"/":""}</Button>;
+      return <Button key={e.name} fullWidth justify="flex-start" variant="subtle" disabled={busy} styles={{label:{whiteSpace:"normal",overflowWrap:"anywhere"}}} style={{height:"auto",minHeight:44}} onClick={()=>{if(directory)go(name);else void choose(name);}}>{e.name}{directory?"/":""}</Button>;
      })}
      {!loading&&listing&&entries.length===0&&<Text>{t("picker_empty")}</Text>}
     </Stack>

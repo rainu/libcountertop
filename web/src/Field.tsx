@@ -104,7 +104,7 @@ function Words({ field, onChange, selectFile, secret, masked }: Props & { secret
   return <Stack gap="xs">
     <TextInput {...props} />
     {field.file_picker && <>
-     <Button fullWidth size="sm" variant="light" onMouseDown={e=>e.preventDefault()} styles={{label:{whiteSpace:"normal"}} style={{height:"auto",minHeight:36}} onClick={()=>setPicking(true)}>{field.file_picker.text.choose_image}</Button>
+     <Button fullWidth size="sm" variant="light" onMouseDown={e=>e.preventDefault()} styles={{label:{whiteSpace:"normal"}}} style={{height:"auto",minHeight:36}} onClick={()=>setPicking(true)}>{field.file_picker.text.choose_image}</Button>
      {picking&&<DeviceFilePicker config={field.file_picker} onClose={()=>setPicking(false)} onSelect={async name=>{await send(name,true);setValue(name);}} />}
     </>}
     {field.reset_label && <Button fullWidth size="sm" variant="light" styles={{ label: { whiteSpace: "normal" } }} style={{ height: "auto", minHeight: 36 }} onMouseDown={(e) => e.preventDefault()} onClick={() => void send("").then(() => setValue(""))}>{field.reset_label}</Button>}
