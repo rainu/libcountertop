@@ -82,12 +82,14 @@ function Words({ field, onChange, selectFile, secret, masked }: Props & { secret
   useEffect(() => setValue(shown), [shown]);
   const pending = useRef(Promise.resolve());
  const [picking,setPicking]=useState(false);
+ const pickerActive=useRef(false);
   const send = (v: string, strict=false) => {
     const next = pending.current.catch(() => {}).then(() => (strict ? selectFile ?? onChange : onChange)(v));
     pending.current = next;
     return next;
   };
   const commit = () => {
+    if(pickerActive.current)return;
     if (secret && value === "") return;
     if (value !== shown) void send(value).then(() => secret && setValue(""));
   };
@@ -104,8 +106,8 @@ function Words({ field, onChange, selectFile, secret, masked }: Props & { secret
   return <Stack gap="xs">
     <TextInput {...props} />
     {field.file_picker && <>
-     <Button fullWidth size="sm" variant="light" onMouseDown={e=>e.preventDefault()} styles={{label:{whiteSpace:"normal"}}} style={{height:"auto",minHeight:36}} onClick={()=>setPicking(true)}>{field.file_picker.text.choose_image}</Button>
-     {picking&&<DeviceFilePicker config={field.file_picker} onClose={()=>setPicking(false)} onSelect={async name=>{await send(name,true);setValue(name);}} />}
+     <Button fullWidth size="sm" variant="light" onMouseDown={e=>{pickerActive.current=true;e.preventDefault();}} styles={{label:{whiteSpace:"normal"}}} style={{height:"auto",minHeight:36}} onClick={()=>{pickerActive.current=true;setPicking(true);}}>{field.file_picker.text.choose_image}</Button>
+     {picking&&<DeviceFilePicker config={field.file_picker} onClose={()=>{setPicking(false);pickerActive.current=false;}} onSelect={async name=>{await send(name,true);setValue(name);}} />}
     </>}
     {field.reset_label && <Button fullWidth size="sm" variant="light" styles={{ label: { whiteSpace: "normal" } }} style={{ height: "auto", minHeight: 36 }} onMouseDown={(e) => e.preventDefault()} onClick={() => void send("").then(() => setValue(""))}>{field.reset_label}</Button>}
   </Stack>;
