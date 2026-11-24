@@ -123,7 +123,7 @@ try {
  // Navigation must preserve the actual native file selection, not only state.
  assert.equal(await page.getByLabel("Choose filesystem upload", { exact: true }).evaluate((input) => input.files?.[0]?.name), "no-space.bin");
  await page.setViewportSize({ width: 390, height: 844 });
- await page.screenshot({ path: "/root/issue38/filesystem-mobile.png", fullPage: true });
+ await page.screenshot({ path: resolve(import.meta.dirname,"../../filesystem-mobile.png"), fullPage: true });
  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
  deny = true;
  await page.getByRole("button", { name: "Refresh directories", exact: true }).click();

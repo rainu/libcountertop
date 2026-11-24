@@ -1,3 +1,4 @@
+import { Video } from "./Video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppShell,
@@ -13,7 +14,7 @@ import {
   ActionIcon,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconAlarm, IconCode, IconFiles, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
+import { IconVideo, IconAlarm, IconCode, IconFiles, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
 import { OpenClawIcon } from "./OpenClawIcon";
 import { OpenClaw } from "./OpenClaw";
 import { Alarms } from "./Alarms";
@@ -44,6 +45,7 @@ const voices = "voices";
 const developer = "developer";
 
 export const appPages = [
+  { slug: "video", label: "Video", icon: IconVideo },
   { slug: "files", label: "Files", icon: IconFiles },
   { slug: "openclaw", label: "OpenClaw", icon: OpenClawIcon },
   { slug: alarms, label: "Alarms", icon: IconAlarm },
@@ -282,6 +284,8 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
             change={change}
             extra={current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
           />
+        ) : app === "video" ? (
+          <Video />
         ) : app === "files" ? (
           <Files onSignedOut={signedOut} />
         ) : app === "openclaw" ? (

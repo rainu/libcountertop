@@ -46,6 +46,7 @@ type Player struct {
 	cur      *track
 	shown    *track
 	paused   bool
+	failed   bool
 	metadata *cast.Metadata
 	marks    []playback.Mark
 	counted  int64
@@ -119,6 +120,7 @@ func (p *Player) fresh() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.counted = 0
+	p.failed = false
 	p.live = nil
 	p.program = nil
 	slog.Debug("the url player forgot the live window")
@@ -283,6 +285,9 @@ func (p *Player) Play() error { return p.resume(nil) }
 func (p *Player) Pause() error { return p.pause(nil) }
 
 func (p *Player) Stop() error {
+	p.mu.Lock()
+	p.failed = false
+	p.mu.Unlock()
 	if !p.stop(nil, p.o.Output.Stop) {
 		p.o.Output.Stop(nil)
 	}
@@ -343,9 +348,9 @@ func (p *Player) seek(only *track, to time.Duration) error {
 	}
 	refused := false
 	if t.feed == nil {
-		t.mu.Lock()
-		refused = t.started && !t.seekable
-		t.mu.Unlock()
+		if meta := t.snapshot.Load(); meta != nil {
+			refused = !meta.seekable
+		}
 	}
 	at := p.Elapsed()
 	d := to - at
