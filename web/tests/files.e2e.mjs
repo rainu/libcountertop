@@ -51,7 +51,7 @@ try {
  await page.getByLabel("Choose file",{exact:true}).setInputFiles({name:"new.bin",mimeType:"application/octet-stream",buffer:payload});
  await page.getByRole("button",{name:"Upload",exact:true}).click();await page.getByRole("alert").filter({hasText:"Not enough capacity"}).waitFor();assert(!files.has("new.bin"));failure="";
  slow=true;await page.getByRole("button",{name:"Upload",exact:true}).click();await page.getByRole("button",{name:"Cancel upload"}).click();await page.getByRole("status").filter({hasText:"cancelled"}).waitFor();assert(!files.has("new.bin"));slow=false;
- await page.setViewportSize({width:390,height:844});await page.screenshot({path:"/root/issue38/files-mobile.png",fullPage:true});
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:resolve(import.meta.dirname,"../../files-mobile.png"),fullPage:true});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
  page.once("dialog",d=>d.accept());await page.getByRole("button",{name:"Delete",exact:true}).click();await page.getByText("No files yet.").waitFor();assert.equal(files.size,0);
  deny=true;await page.getByRole("button",{name:"Refresh",exact:true}).click();await page.getByText("Sign in",{exact:true}).first().waitFor();
