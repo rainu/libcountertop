@@ -143,7 +143,17 @@ func (r *Receiver) run(ctx context.Context) error {
 	r.opened(page.Window)
 	defer page.Events.Listen(logged)()
 	if r.youtube != nil {
-		source := "if (location.hostname === \"www.youtube.com\" && location.pathname.startsWith(\"/embed/\")) {\n" + r.hooks + "\n}"
+		if err := page.Call(
+			"Emulation.setUserAgentOverride",
+			map[string]any{"userAgent": youtubeUserAgent()},
+		); err != nil {
+			return err
+		}
+		source := "if (location.hostname === \"www.youtube.com\" && (location.pathname.startsWith(\"/embed/\") || location.pathname === \"/watch\")) {\n" + mediaHooks(
+			r.env,
+			r.o.BusPort,
+			false,
+		) + "\nif(location.pathname === \"/watch\"){\n" + youtubeSiteJS + "\n}\n}"
 		if err := page.InjectFrames(ctx, source); err != nil {
 			return err
 		}

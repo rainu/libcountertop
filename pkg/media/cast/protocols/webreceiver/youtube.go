@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,8 +24,12 @@ import (
 //go:embed youtube.html
 var youtubeHTML string
 
+//go:embed youtube-site.js
+var youtubeSiteJS string
+
 // YouTube uses YouTube's official IFrame Player API. The existing media adapter
-// supplies the device decoders, not a scraper, stream extractor, or Cast sender.
+// supplies the device decoders. Contextually refused embeds can use the official
+// full website through standard media controls, not extracted stream URLs.
 type YouTube struct {
 	r      *Receiver
 	op     sync.Mutex
@@ -119,6 +124,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 	}
 	// A load deadline does not terminate a successfully playing session.
 	loaded := false
+	website := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -132,7 +138,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		raw, err := y.r.Eval(
 			probeCtx,
-			`JSON.stringify({...(window.youtubeStatus||{}),position:window.youtubePlayer?.getCurrentTime?.()||0,duration:window.youtubePlayer?.getDuration?.()||0})`,
+			`JSON.stringify({...(window.youtubeStatus||{}),page:location.pathname,host:location.hostname,position:window.youtubePlayer?.getCurrentTime?.()||0,duration:window.youtubePlayer?.getDuration?.()||0})`,
 		)
 		cancel()
 		if err != nil {
@@ -140,11 +146,27 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		}
 		var state struct {
 			Ready              bool
+			Page, Host         string
 			State              int
 			Error              int
 			Position, Duration float64
 		}
 		if json.Unmarshal([]byte(raw), &state) != nil {
+			continue
+		}
+		if website && (state.Host == "consent.youtube.com" || state.Host == "accounts.google.com") {
+			y.fail(ctx, "YouTube requires consent or sign-in on this device")
+			return
+		}
+		if website && state.Page != "/watch" {
+			continue // Navigation is asynchronous; ignore the old embed's error.
+		}
+		if !website && (state.Error == 101 || state.Error == 150) {
+			website = true
+			if err := y.openWebsite(ctx, id, at, play); err != nil {
+				y.fail(ctx, "Could not open the YouTube website")
+				return
+			}
 			continue
 		}
 		if state.Error != 0 {
@@ -192,21 +214,35 @@ func (y *YouTube) monitor(ctx context.Context) {
 		case <-ticker.C:
 		}
 		bounded, done := context.WithTimeout(ctx, 2*time.Second)
-		raw, err := y.r.Eval(bounded, `JSON.stringify(window.youtubeStatus||{})`)
+		raw, err := y.r.Eval(
+			bounded,
+			`JSON.stringify({...(window.youtubeStatus||{}),duration:window.youtubePlayer?.getDuration?.()||0})`,
+		)
 		done()
 		if err != nil {
 			y.fail(ctx, "The YouTube player disconnected")
 			return
 		}
 		var state struct {
-			State int
-			Error int
+			State    int
+			Error    int
+			Site     bool
+			Duration float64
 		}
 		if json.Unmarshal([]byte(raw), &state) != nil {
 			continue
 		}
 		if state.Error != 0 {
 			y.fail(ctx, youtubeError(state.Error))
+			return
+		}
+		if state.Site && state.State == 0 {
+			// Do not follow the full website's suggested next video.
+			y.op.Lock()
+			if ctx.Err() == nil {
+				y.stop()
+			}
+			y.op.Unlock()
 			return
 		}
 		s := y.r.player.Snapshot()
@@ -216,7 +252,7 @@ func (y *YouTube) monitor(ctx context.Context) {
 		}
 		y.mu.Lock()
 		if ctx.Err() == nil {
-			s.Duration = y.status.Duration
+			s.Duration = state.Duration
 			s.Seekable = s.Duration > 0
 			if state.State == 0 {
 				s.State = "idle"
@@ -248,7 +284,7 @@ func youtubeError(code int) string {
 	case 100:
 		return "This YouTube video is unavailable, removed, or private"
 	case 101, 150:
-		return "The owner does not allow this video in an embedded player"
+		return "YouTube refused playback in this embedded-player context"
 	case 152, 153:
 		return "YouTube refused this embedded player or its client identification"
 	case -1:
@@ -312,4 +348,36 @@ func (y *YouTube) serve(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write([]byte(youtubeHTML))
+}
+
+// openWebsite keeps playback on the official website when its embed is refused.
+// The same media adapter/decoder is initialized by the page's pre-navigation hook.
+func (y *YouTube) openWebsite(ctx context.Context, id string, at time.Duration, play bool) error {
+	y.r.mu.Lock()
+	page := y.r.tools
+	y.r.mu.Unlock()
+	if page == nil {
+		return errors.New("YouTube page is not ready")
+	}
+	q := url.Values{
+		"v":        {id},
+		"t":        {strconv.FormatFloat(at.Seconds(), 'f', 3, 64) + "s"},
+		"autoplay": {strconv.Itoa(map[bool]int{true: 1, false: 0}[play])},
+	}
+	y.op.Lock()
+	defer y.op.Unlock()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return page.Navigate("https://www.youtube.com/watch?" + q.Encode())
+}
+
+func youtubeUserAgent() string {
+	for _, arg := range EngineArgs() {
+		if agent, ok := strings.CutPrefix(arg, "--user-agent="); ok {
+			browser, _, _ := strings.Cut(agent, " CrKey/")
+			return browser
+		}
+	}
+	return ""
 }

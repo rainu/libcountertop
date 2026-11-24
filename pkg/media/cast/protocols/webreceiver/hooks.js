@@ -24,6 +24,7 @@
   const feeds = (type) => ask(type, "feed");
   const seals = (type) => ask(type, "sealed");
 
+  if (__CAST_PLATFORM__) {
   window.cast = window.cast || {};
   window.cast.__platform__ = {
     queryPlatformValue(k) { return values[k]; },
@@ -32,6 +33,8 @@
     display: { getHdcpVersion: () => Promise.resolve("1.4"), updateOutputMode: () => Promise.resolve() },
     metrics: { logEventToUma() {}, logBoolToUma() {}, logIntToUma() {}, logHistogramValueToUma() {} },
   };
+
+  }
 
   const proto = HTMLMediaElement.prototype;
   const vproto = HTMLVideoElement.prototype;

@@ -13,6 +13,10 @@ import (
 var hooksJS string
 
 func hooks(env cast.Env, port int) string {
+	return mediaHooks(env, port, true)
+}
+
+func mediaHooks(env cast.Env, port int, castPlatform bool) string {
 	screen := env.Video != nil
 	values, _ := json.Marshal(map[string]any{
 		"port-for-web-server": port,
@@ -40,5 +44,6 @@ func hooks(env cast.Env, port int) string {
 	return strings.NewReplacer(
 		"__VALUES__", string(values),
 		"__PORT__", strconv.Itoa(port),
+		"__CAST_PLATFORM__", strconv.FormatBool(castPlatform),
 	).Replace(hooksJS)
 }

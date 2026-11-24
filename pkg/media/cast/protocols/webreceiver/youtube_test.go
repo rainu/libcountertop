@@ -69,3 +69,26 @@ func TestYouTubeWrapperAndSanitizedErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestWebsiteUsesBrowserIdentityAndNoCastPlatform(t *testing.T) {
+	ua := youtubeUserAgent()
+	if ua == "" || strings.Contains(ua, "CrKey") || !strings.Contains(ua, "Chrome/") {
+		t.Fatal("website does not have a browser identity")
+	}
+	normal := mediaHooks(cast.Env{}, 8013, false)
+	castHooks := hooks(cast.Env{}, 8012)
+	if !strings.Contains(normal, "if (false)") || !strings.Contains(castHooks, "if (true)") {
+		t.Fatal("Cast platform emulation must not leak into ordinary YouTube playback")
+	}
+	for _, expected := range []string{"document.querySelector", "playVideo()", "pauseVideo()", "seekTo(t)", "site:true", "advertising()"} {
+		if !strings.Contains(youtubeSiteJS, expected) {
+			t.Fatalf("missing browser bridge contract %q", expected)
+		}
+	}
+	y := NewYouTube(cast.Env{Output: quietOutput{}}, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := y.openWebsite(ctx, "cJjMmDeOAZ4", 0, true); err == nil {
+		t.Fatal("navigation with no live page accepted")
+	}
+}
