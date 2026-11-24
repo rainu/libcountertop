@@ -8,10 +8,21 @@ import (
 
 func TestFrameAdapterBeforeResumeAndSiteIsolationUnchanged(t *testing.T) {
 	var calls []string
-	if err := initializeFrame(func(m string, p any) error { calls = append(calls, m); return nil }, "adapter"); err != nil {
+	if err := initializeFrame(
+		func(m string, p any) error { calls = append(calls, m); return nil },
+		"adapter",
+	); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(calls, []string{"Page.enable", "Runtime.enable", "Page.addScriptToEvaluateOnNewDocument", "Target.setAutoAttach"}) {
+	if !reflect.DeepEqual(
+		calls,
+		[]string{
+			"Page.enable",
+			"Runtime.enable",
+			"Page.addScriptToEvaluateOnNewDocument",
+			"Target.setAutoAttach",
+		},
+	) {
 		t.Fatal(calls)
 	}
 	sentinel := errors.New("domain unavailable")

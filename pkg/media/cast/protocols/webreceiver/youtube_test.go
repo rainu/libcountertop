@@ -2,16 +2,22 @@ package webreceiver
 
 import (
 	"context"
-	"github.com/ygelfand/libcountertop/pkg/media/cast"
-	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/ygelfand/libcountertop/pkg/media/cast"
+	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
 )
 
 func TestYouTubeValidationAndCancelledLoadCannotOverwriteState(t *testing.T) {
 	y := NewYouTube(cast.Env{Output: quietOutput{}}, Options{})
-	if err := y.Load(cast.Media{ContentID: "https://youtube.com/playlist?list=x"}, 0, true); err == nil || y.Active() {
+	if err := y.Load(
+		cast.Media{ContentID: "https://youtube.com/playlist?list=x"},
+		0,
+		true,
+	); err == nil ||
+		y.Active() {
 		t.Fatal("accepted playlist")
 	}
 	if err := y.Load(cast.Media{ContentID: "https://youtu.be/M7lc1UVf-VE"}, 0, true); err != nil {
@@ -20,7 +26,9 @@ func TestYouTubeValidationAndCancelledLoadCannotOverwriteState(t *testing.T) {
 	if y.Snapshot().State != "loading" {
 		t.Fatal("no loading status")
 	}
-	y.Stop()
+	if err := y.Stop(); err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	y.fail(ctx, "stale failure")
@@ -49,7 +57,8 @@ func TestYouTubeWrapperAndSanitizedErrors(t *testing.T) {
 		if w.Code != tc.code {
 			t.Fatal(w.Code)
 		}
-		if tc.code == 200 && (!strings.Contains(w.Body.String(), "https://www.youtube.com/iframe_api") || !strings.Contains(w.Body.String(), "origin:location.origin")) {
+		if tc.code == 200 &&
+			(!strings.Contains(w.Body.String(), "https://www.youtube.com/iframe_api") || !strings.Contains(w.Body.String(), "origin:location.origin")) {
 			t.Fatal("official embed/origin missing")
 		}
 	}

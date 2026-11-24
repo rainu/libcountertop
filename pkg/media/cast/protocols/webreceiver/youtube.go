@@ -49,7 +49,8 @@ func (y *YouTube) Run(ctx context.Context) error {
 	return service.Keep(ctx, "YouTube player", y.r.run)
 }
 
-func (y *YouTube) Active() bool                 { y.mu.Lock(); defer y.mu.Unlock(); return y.active }
+func (y *YouTube) Active() bool { y.mu.Lock(); defer y.mu.Unlock(); return y.active }
+
 func (y *YouTube) Snapshot() urlplayer.Snapshot { y.mu.Lock(); defer y.mu.Unlock(); return y.status }
 
 func (y *YouTube) Load(m cast.Media, at time.Duration, play bool) error {
@@ -89,13 +90,19 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		tools := y.r.tools
 		y.r.mu.Unlock()
 		if tools != nil {
-			q := url.Values{"v": {id}, "start": {strconv.FormatFloat(at.Seconds(), 'f', 3, 64)}, "play": {strconv.Itoa(map[bool]int{true: 1, false: 0}[play])}}
+			q := url.Values{
+				"v":     {id},
+				"start": {strconv.FormatFloat(at.Seconds(), 'f', 3, 64)},
+				"play":  {strconv.Itoa(map[bool]int{true: 1, false: 0}[play])},
+			}
 			y.op.Lock()
 			if ctx.Err() != nil {
 				y.op.Unlock()
 				return
 			}
-			err := tools.Navigate("http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode())
+			err := tools.Navigate(
+				"http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode(),
+			)
 			y.op.Unlock()
 			if err != nil {
 				y.fail(ctx, "The YouTube player could not open")
@@ -123,7 +130,10 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 			return
 		}
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		raw, err := y.r.Eval(probeCtx, `JSON.stringify({...(window.youtubeStatus||{}),position:window.youtubePlayer?.getCurrentTime?.()||0,duration:window.youtubePlayer?.getDuration?.()||0})`)
+		raw, err := y.r.Eval(
+			probeCtx,
+			`JSON.stringify({...(window.youtubeStatus||{}),position:window.youtubePlayer?.getCurrentTime?.()||0,duration:window.youtubePlayer?.getDuration?.()||0})`,
+		)
 		cancel()
 		if err != nil {
 			continue
@@ -266,13 +276,16 @@ func (y *YouTube) call(expr string) error {
 	y.op.Lock()
 	defer y.op.Unlock()
 	if !y.Active() {
-		return errors.New("No YouTube video is loaded")
+		return errors.New("no YouTube video is loaded")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	raw, err := y.r.Eval(ctx, "Boolean(window.youtubePlayer && window.youtubeStatus?.ready && ("+expr+",true))")
+	raw, err := y.r.Eval(
+		ctx,
+		"Boolean(window.youtubePlayer && window.youtubeStatus?.ready && ("+expr+",true))",
+	)
 	if err != nil || raw != "true" {
-		return errors.New("The YouTube player is not ready")
+		return errors.New("the YouTube player is not ready")
 	}
 	return nil
 }
@@ -280,7 +293,7 @@ func (y *YouTube) Play() error  { return y.call("youtubePlayer.playVideo()") }
 func (y *YouTube) Pause() error { return y.call("youtubePlayer.pauseVideo()") }
 func (y *YouTube) Seek(at time.Duration) error {
 	if at < 0 || !y.Snapshot().Seekable || math.IsInf(at.Seconds(), 0) {
-		return errors.New("This YouTube video is not seekable")
+		return errors.New("this YouTube video is not seekable")
 	}
 	return y.call(fmt.Sprintf("youtubePlayer.seekTo(%f,true)", at.Seconds()))
 }
@@ -289,7 +302,9 @@ func (y *YouTube) serve(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	v, _, err := youtubeurl.Parse("https://www.youtube.com/watch?v=" + url.QueryEscape(req.URL.Query().Get("v")))
+	v, _, err := youtubeurl.Parse(
+		"https://www.youtube.com/watch?v=" + url.QueryEscape(req.URL.Query().Get("v")),
+	)
 	if err != nil || v.ID == "" {
 		http.Error(w, "Invalid video", http.StatusBadRequest)
 		return

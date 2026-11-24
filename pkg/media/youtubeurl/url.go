@@ -12,7 +12,7 @@ import (
 
 var videoID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 var offset = regexp.MustCompile(`^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$`)
-var ErrURL = errors.New("Use a YouTube watch URL or youtu.be link for a single public video")
+var ErrURL = errors.New("use a YouTube watch URL or youtu.be link for a single public video")
 
 type Video struct {
 	ID    string
@@ -28,11 +28,18 @@ func Parse(raw string) (v Video, youtube bool, err error) {
 	}
 	host := strings.ToLower(u.Hostname())
 	switch host {
-	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "www.youtu.be":
+	case "youtube.com",
+		"www.youtube.com",
+		"m.youtube.com",
+		"music.youtube.com",
+		"youtu.be",
+		"www.youtu.be":
 	default:
 		return v, false, nil
 	}
-	if (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.Port() != "" || u.Fragment != "" || len(raw) > 8192 {
+	if (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.Port() != "" ||
+		u.Fragment != "" ||
+		len(raw) > 8192 {
 		return v, true, ErrURL
 	}
 	if host == "youtu.be" || host == "www.youtu.be" {

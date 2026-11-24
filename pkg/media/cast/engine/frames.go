@@ -48,7 +48,10 @@ func (p *Page) InjectFrames(ctx context.Context, source string) error {
 		stop()
 		unlisten()
 	})
-	return initializeFrame(func(m string, v any) error { _, err := p.Request(ctx, m, v); return err }, source)
+	return initializeFrame(
+		func(m string, v any) error { _, err := p.Request(ctx, m, v); return err },
+		source,
+	)
 }
 
 func initializeFrame(request func(string, any) error, source string) error {
