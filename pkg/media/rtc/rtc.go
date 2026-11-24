@@ -63,7 +63,17 @@ type Message struct {
 	Data json.RawMessage `json:"data,omitempty"`
 }
 
+// ControlChannel carries bounded, provider-owned control messages. Payloads
+// remain caller/backend data and must not be logged.
+type ControlChannel struct {
+	Name     string
+	Opened   func()
+	Received func([]byte)
+	Closed   func()
+}
 type Media struct {
+	Control *ControlChannel
+
 	Audio    Audio
 	Camera   Camera
 	Screen   Screen
@@ -121,7 +131,7 @@ type Link struct {
 	closed  sync.Once
 }
 
-func api() (*webrtc.API, error) {
+func api(control ...bool) (*webrtc.API, error) {
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterCodec(webrtc.RTPCodecParameters{
 		RTPCodecCapability: webrtc.RTPCodecCapability{
@@ -147,12 +157,15 @@ func api() (*webrtc.API, error) {
 	return webrtc.NewAPI(
 		webrtc.WithMediaEngine(m),
 		webrtc.WithInterceptorRegistry(reg),
-		webrtc.WithSettingEngine(settings()),
+		webrtc.WithSettingEngine(settings(control...)),
 	), nil
 }
 
-func settings() webrtc.SettingEngine {
+func settings(control ...bool) webrtc.SettingEngine {
 	se := webrtc.SettingEngine{}
+	if len(control) > 0 && control[0] {
+		se.SetSCTPMaxMessageSize(262144)
+	}
 	se.SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetICETimeouts(disconnectedAfter, failedAfter, keepalive)
@@ -168,7 +181,16 @@ func NewWithStreamID(
 	report func(webrtc.PeerConnectionState),
 	streamID string,
 ) (*Link, error) {
-	built, err := api()
+	return newLink(m, report, streamID, true)
+}
+
+// NewAudioOnly negotiates a thin audio peer without a data channel. Control is
+// owned by the caller's separately authenticated signaling transport.
+func NewAudioOnly(m Media, report func(webrtc.PeerConnectionState)) (*Link, error) {
+	return newLink(m, report, "voice", false)
+}
+func newLink(m Media, report func(webrtc.PeerConnectionState), streamID string, data bool) (*Link, error) {
+	built, err := api(m.Control != nil)
 	if err != nil {
 		return nil, err
 	}
@@ -208,23 +230,50 @@ func NewWithStreamID(
 			webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
 		)
 	}
-	if err == nil {
-		negotiated, id := true, uint16(0)
-		l.talk, err = pc.CreateDataChannel(
-			"status",
-			&webrtc.DataChannelInit{Negotiated: &negotiated, ID: &id},
-		)
+	if err == nil && (data || m.Control != nil) {
+		if m.Control != nil {
+			l.talk, err = pc.CreateDataChannel(m.Control.Name, nil)
+		} else {
+			negotiated, id := true, uint16(0)
+			l.talk, err = pc.CreateDataChannel("status", &webrtc.DataChannelInit{Negotiated: &negotiated, ID: &id})
+		}
 	}
 	if err != nil {
 		_ = l.Close()
 		return nil, err
 	}
-	l.talk.OnOpen(func() {
-		if m.Opened != nil {
-			m.Opened()
+	if l.talk != nil {
+		if m.Control != nil {
+			l.talk.OnOpen(func() {
+				if m.Control.Opened != nil {
+					m.Control.Opened()
+				}
+			})
+			l.talk.OnMessage(func(msg webrtc.DataChannelMessage) {
+				if !msg.IsString || len(msg.Data) > 262144 {
+					if m.Control.Closed != nil {
+						m.Control.Closed()
+					}
+					return
+				}
+				if m.Control.Received != nil {
+					m.Control.Received(msg.Data)
+				}
+			})
+			l.talk.OnClose(func() {
+				if m.Control.Closed != nil {
+					m.Control.Closed()
+				}
+			})
+		} else {
+			l.talk.OnOpen(func() {
+				if m.Opened != nil {
+					m.Opened()
+				}
+			})
+			l.talk.OnMessage(l.heard)
 		}
-	})
-	l.talk.OnMessage(l.heard)
+	}
 	pc.OnTrack(
 		func(t *webrtc.TrackRemote, r *webrtc.RTPReceiver) { l.worker(func() { l.receive(t, r) }) },
 	)
@@ -283,7 +332,7 @@ func (l *Link) Sending() bool { return l.video != nil && !l.blind.Load() }
 var ErrNotOpen = errors.New("rtc: data channel not open")
 
 func (l *Link) Send(kind string, v any) error {
-	if l.talk.ReadyState() != webrtc.DataChannelStateOpen {
+	if l.talk == nil || l.talk.ReadyState() != webrtc.DataChannelStateOpen {
 		return ErrNotOpen
 	}
 	data, err := json.Marshal(v)
@@ -642,4 +691,23 @@ func (l *Link) worker(run func()) {
 	l.workers.Add(1)
 	l.life.Unlock()
 	go func() { defer l.workers.Done(); run() }()
+}
+
+// NewControlledAudio is audio-only media with an in-band control channel. It
+// does not alter existing call/status-channel negotiation.
+func NewControlledAudio(m Media, report func(webrtc.PeerConnectionState)) (*Link, error) {
+	if m.Control == nil || m.Control.Name == "" {
+		return nil, errors.New("rtc: control channel missing")
+	}
+	return newLink(m, report, "voice", false)
+}
+func (l *Link) SendControl(value any) error {
+	if l.media.Control == nil || l.talk == nil || l.talk.ReadyState() != webrtc.DataChannelStateOpen {
+		return ErrNotOpen
+	}
+	b, err := json.Marshal(value)
+	if err != nil || len(b) > 262144 {
+		return errors.New("rtc: invalid control message")
+	}
+	return l.talk.SendText(string(b))
 }

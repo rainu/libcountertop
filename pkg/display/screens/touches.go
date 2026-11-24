@@ -40,6 +40,8 @@ func (t *touches) contact(c touch.Contact) {
 	switch c.Phase {
 	case touch.Down, touch.Move:
 		t.down[c.ID] = image.Pt(c.X, c.Y)
+	case touch.Cancel:
+		delete(t.down, c.ID)
 	case touch.Up:
 		if at, ok := t.down[c.ID]; ok {
 			t.lifted = append(t.lifted, lift{at: at, when: time.Now()})

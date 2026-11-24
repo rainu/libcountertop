@@ -145,6 +145,9 @@ type Stats struct {
 }
 
 type Renderer struct {
+	// BeforeEvent runs on the UI thread before dispatch, for cancellation fences.
+	BeforeEvent func(*gui.Event)
+
 	sink    Sink
 	textSys *glyph.TextSystem
 	back    *glyphBack
@@ -316,6 +319,13 @@ func (r *Renderer) poke() {
 }
 
 func (r *Renderer) Run(ctx context.Context, w *gui.Window) error {
+	dispatch := func(e gui.Event) {
+		if r.BeforeEvent != nil {
+			r.BeforeEvent(&e)
+		}
+		w.EventFn(&e)
+	}
+
 	if w.Config.OnInit != nil {
 		w.Config.OnInit(w)
 	}
@@ -324,7 +334,7 @@ func (r *Renderer) Run(ctx context.Context, w *gui.Window) error {
 		for drained := false; !drained; {
 			select {
 			case e := <-r.events:
-				w.EventFn(&e)
+				dispatch(e)
 			default:
 				drained = true
 			}
@@ -342,7 +352,7 @@ func (r *Renderer) Run(ctx context.Context, w *gui.Window) error {
 		case <-ctx.Done():
 			return nil
 		case e := <-r.events:
-			w.EventFn(&e)
+			dispatch(e)
 		case <-r.wake:
 		}
 	}

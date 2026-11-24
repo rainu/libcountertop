@@ -43,14 +43,16 @@ type Identity struct {
 }
 
 type Dependencies struct {
-	KeyPath      string
-	DialPath     string
-	Identity     func() (Identity, error)
-	Bluetooth    func() esphome.BluetoothFeature
-	Registry     Registry
-	Adoption     Adoption
-	Logs         LogSource
-	OnSubscribed func()
+	// ConcurrentActions opts into bounded non-blocking action dispatch (zero keeps legacy ordering).
+	ConcurrentActions int
+	KeyPath           string
+	DialPath          string
+	Identity          func() (Identity, error)
+	Bluetooth         func() esphome.BluetoothFeature
+	Registry          Registry
+	Adoption          Adoption
+	Logs              LogSource
+	OnSubscribed      func()
 }
 
 type Server struct {
@@ -172,6 +174,9 @@ func (a *Server) register() error {
 	}
 	a.srv.Info = info
 	a.srv.Handler = esphome.Chain(append([]esphome.Handler{ents}, a.deps.Registry.Handlers()...)...)
+	if a.deps.ConcurrentActions > 0 {
+		a.srv.Handler = &actionHandler{next: a.srv.Handler, slots: make(chan struct{}, a.deps.ConcurrentActions)}
+	}
 	return nil
 }
 

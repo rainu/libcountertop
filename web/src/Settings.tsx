@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { Divider, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { Divider, Group, Paper, Stack, Text, TextInput, Button, ThemeIcon, Title } from "@mantine/core";
 import { notifications } from "./notify";
 import { FieldRow } from "./Field";
 import { groupID, type Section } from "./sections";
@@ -37,6 +37,14 @@ export function Settings({ section, focus, change, extra }: Props) {
                       change(domain, field.name, v).catch((e: Error) => notifications.error(e.message))
                     }
                   />
+                  {field.help && <Text size="sm" c="dimmed" pb="sm" style={{ overflowWrap: "anywhere" }}>{field.help}</Text>}
+                  {domain === "access" && field.name === "webdav" && field.value === "on" && (
+                    <Stack gap="xs" pb="md" data-testid="webdav-connection">
+                      <TextInput label="WebDAV URL (HTTPS)" value={window.location.origin + "/api/v1/webdav/"} readOnly />
+                      <Text size="sm">Folder: /api/v1/webdav/ · Filesystem: / · Username: owner · Password: EchoLocal admin password</Text>
+                      <Button size="xs" variant="light" onClick={() => navigator.clipboard.writeText(window.location.origin + "/api/v1/webdav/").catch(() => notifications.error("Copy the WebDAV URL from the field above."))}>Copy WebDAV URL</Button>
+                    </Stack>
+                  )}
                 </div>
               </Fragment>
             ))}

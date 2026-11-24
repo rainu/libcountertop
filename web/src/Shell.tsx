@@ -14,7 +14,9 @@ import {
   ActionIcon,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconVideo, IconAlarm, IconCode, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
+import { IconVideo, IconAlarm, IconCode, IconFiles, IconLayoutDashboard, IconLogout, IconPhone, IconSpeakerphone, IconVoice } from "@tabler/icons-react";
+import { OpenClawIcon } from "./OpenClawIcon";
+import { OpenClaw } from "./OpenClaw";
 import { Alarms } from "./Alarms";
 import { Broadcast } from "./Broadcast";
 import { Call } from "./Call";
@@ -30,6 +32,7 @@ import { sections, type Section } from "./sections";
 import { Settings } from "./Settings";
 import { SettingsLink } from "./SettingsLink";
 import { Theme } from "./Theme";
+import { Files } from "./Files";
 import { Voices } from "./Voices";
 import { Wifi } from "./Wifi";
 
@@ -43,6 +46,8 @@ const developer = "developer";
 
 export const appPages = [
   { slug: "video", label: "Video", icon: IconVideo },
+  { slug: "files", label: "Files", icon: IconFiles },
+  { slug: "openclaw", label: "OpenClaw", icon: OpenClawIcon },
   { slug: alarms, label: "Alarms", icon: IconAlarm },
   { slug: calls, label: "Call", icon: IconPhone },
   { slug: broadcast, label: "Broadcast", icon: IconSpeakerphone },
@@ -281,6 +286,10 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
           />
         ) : app === "video" ? (
           <Video />
+        ) : app === "files" ? (
+          <Files onSignedOut={signedOut} />
+        ) : app === "openclaw" ? (
+          <OpenClaw onSignedOut={signedOut} />
         ) : app === alarms ? (
           <Alarms onSignedOut={signedOut} />
         ) : app === calls ? (

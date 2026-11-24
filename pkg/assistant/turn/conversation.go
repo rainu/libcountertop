@@ -69,13 +69,14 @@ type event struct {
 }
 
 type Conversation struct {
-	replyID uint64
-	options Dependencies
-	Word    func(int) (string, bool)
-	Ended   hook.Hook[struct{}]
-	vs      *esphome.VoiceSatellite
-	source  Microphone
-	speaker Speaker
+	pendingStarts atomic.Int32
+	replyID       uint64
+	options       Dependencies
+	Word          func(int) (string, bool)
+	Ended         hook.Hook[struct{}]
+	vs            *esphome.VoiceSatellite
+	source        Microphone
+	speaker       Speaker
 
 	sound  Sound
 	player interface{ Sounding(bool) }
@@ -202,9 +203,15 @@ func (c *Conversation) sends(ctx context.Context) {
 }
 
 func (c *Conversation) post(e event) {
+	if e.kind == evStart {
+		c.pendingStarts.Add(1)
+	}
 	select {
 	case c.events <- e:
 	default:
+		if e.kind == evStart {
+			c.pendingStarts.Add(-1)
+		}
 		slog.Warn("Conversation event dropped", "kind", e.kind, "phase", c.Phase())
 	}
 }
@@ -239,6 +246,9 @@ func (c *Conversation) Run(ctx context.Context) {
 			c.handle(event{kind: evPending})
 		case e := <-c.events:
 			c.handle(e)
+			if e.kind == evStart {
+				c.pendingStarts.Add(-1)
+			}
 		}
 	}
 }
@@ -713,6 +723,14 @@ func (c *Conversation) tts(data []byte, end bool) {
 func (c *Conversation) Start(slot int) { c.post(event{kind: evStart, slot: slot}) }
 
 func (c *Conversation) Heard(slot int) {
+	c.pendingStarts.Add(1)
+	async := false
+	defer func() {
+		if !async {
+			c.pendingStarts.Add(-1)
+		}
+	}()
+
 	at := time.Now()
 	if c.options.Voices != nil && !c.Busy() && c.options.Voices.Claim(at) {
 		if c.options.Arbiter != nil {
@@ -729,7 +747,9 @@ func (c *Conversation) Heard(slot int) {
 	score := c.source.Over(time.Second)
 	slog.Info("wake score", "over_floor_db", score, "floor_dbfs", c.source.Floor(),
 		"gain_db", c.source.Gain())
+	async = true
 	safe.Go("wake arbitration", func() {
+		defer c.pendingStarts.Add(-1)
 		if !c.options.Arbiter.Decide(phrase, score) {
 			c.options.Presentation.Elsewhere()
 			return
@@ -879,3 +899,6 @@ func (c *Conversation) reported(dry time.Time) {
 		"clipped", c.speaker.Clipped(),
 		"dropped", dropped(c.source))
 }
+
+// Pending reports queued/arbitrating activations without changing Busy semantics.
+func (c *Conversation) Pending() bool { return c.pendingStarts.Load() > 0 }

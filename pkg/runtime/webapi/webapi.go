@@ -77,6 +77,7 @@ type API struct {
 	s       sessions
 	shot    screenCache
 	control controlAccess
+	dav     davAccess
 }
 
 func New(o Options) *API {
@@ -89,6 +90,9 @@ func New(o Options) *API {
 		Device: o.DeviceID,
 		Read:   o.Settings.Read,
 		Save: func(s setting.Setting[schema.Frontend], v string) error {
+			if s.Name == "webdav" {
+				return a.saveDAV(s, v)
+			}
 			return setting.Store(o.Settings, s, v)
 		},
 	}
@@ -104,11 +108,14 @@ func NewTable() *setting.Table[schema.Frontend] {
 		passwordMost,
 		func(c *schema.Frontend) *string { return &c.Password },
 	)
-	password.Kind = setting.Credential
+	password.Kind = setting.Secret
 	return setting.NewTable(
 		"access",
 		[]setting.Group{Group},
-		[]setting.Setting[schema.Frontend]{password},
+		[]setting.Setting[schema.Frontend]{password, setting.Flag(
+			setting.Setting[schema.Frontend]{Name: "webdav", Group: Group, ID: "frontend_webdav", Icon: "mdi:folder-network"},
+			func(c *schema.Frontend) *bool { return &c.WebDAV },
+		)},
 		setting.Messages{Text: say.T, Missing: say.Missing},
 	)
 }
@@ -121,6 +128,8 @@ func (a *API) Controls() *setting.Controls[schema.Frontend] { return a.knobs }
 
 func (a *API) Password() string { return a.o.Settings.Read().Password }
 
+func (a *API) WebDAVEnabled() bool          { return a.o.Settings.Read().WebDAV }
+func (a *API) SetWebDAV(v bool) error       { return a.knobs.Change("webdav", setting.OnOff(v)) }
 func (a *API) Input() *textentry.Controller { return a.o.Input }
 
 func (a *API) SetPassword(v string) error { return a.knobs.Change("password", v) }
@@ -146,6 +155,7 @@ func (a *API) Restore(c schema.Frontend) {
 func (a *API) Routes() map[string]http.Handler {
 	auth := func(h http.HandlerFunc) http.Handler { return a.require(h) }
 	routes := map[string]http.Handler{
+		"GET " + Prefix + "/webdav-info":              auth(a.webdavInfo),
 		"POST " + Prefix + "/login":                   http.HandlerFunc(a.login),
 		"POST " + Prefix + "/logout":                  http.HandlerFunc(a.logout),
 		"GET " + Prefix + "/logo/{tone}":              http.HandlerFunc(a.logo),
@@ -184,10 +194,17 @@ func (a *API) Routes() map[string]http.Handler {
 	for name, h := range a.o.Pages {
 		at := Prefix + "/" + name
 		inner := a.require(http.StripPrefix(at, h))
+		if name == "webdav" {
+			inner = a.requireDAV(http.StripPrefix(at, h))
+		}
 		if name == "desktop" {
 			inner = a.requireControl(http.StripPrefix(at, h))
 		}
-		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
+		methods := []string{"GET", "HEAD", "POST", "PUT", "DELETE"}
+		if name == "webdav" {
+			methods = append(methods, "OPTIONS", "PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK")
+		}
+		for _, method := range methods {
 			routes[method+" "+at] = inner
 			routes[method+" "+at+"/*"] = inner
 		}

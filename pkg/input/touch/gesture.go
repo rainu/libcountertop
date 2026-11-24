@@ -109,6 +109,15 @@ func (r *Recognizer) Feed(c Contact) (Gesture, bool) {
 	}
 
 	switch c.Phase {
+	case Cancel:
+		delete(r.tracking, c.ID)
+		if len(r.tracking) == 0 {
+			r.ended = nil
+			r.fingers = 0
+			r.tapped = Gesture{}
+			r.tappedAt = time.Time{}
+		}
+		return Gesture{}, false
 	case Down:
 		if len(r.tracking) == 0 {
 			r.ended, r.fingers, r.began = nil, 0, at(c)

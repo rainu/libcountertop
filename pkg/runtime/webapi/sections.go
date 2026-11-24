@@ -18,7 +18,7 @@ var sections = []section{
 		"calendar", "todo", "tv",
 	}},
 	{"settings.display", []string{
-		"screen", "clock", "idle", "visual", "poster", "photos", "weather", "apps", "cameras",
+		"avatar", "screen", "clock", "idle", "visual", "poster", "photos", "weather", "apps", "cameras",
 		"doorbell", "homealarm", "thermostat", "presence",
 	}},
 	{"home.title", []string{"home", "lovelace"}},

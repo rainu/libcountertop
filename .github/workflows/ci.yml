@@ -46,3 +46,20 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
       - run: make -f native/Makefile all API=${{ matrix.api }} PREFIX=${{ matrix.prefix }} OUT="$RUNNER_TEMP/helpers"
       - run: make -f native/Makefile test OUT="$RUNNER_TEMP/native-tests"
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - name: verify committed frontend assets
+        run: git diff --exit-code -- pkg/runtime/webui/dist
+      - run: npm --prefix web test
+      - run: npx --prefix web playwright install --with-deps chromium
+      - run: npm --prefix web run test:e2e

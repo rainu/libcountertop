@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Group, PasswordInput, Select, Slider, Switch, Text, TextInput } from "@mantine/core";
+import { useEffect, useState, useRef } from "react";
+import { Button, Stack, Group, PasswordInput, Select, Slider, Switch, Text, TextInput } from "@mantine/core";
 import type { Field as FieldType } from "./api";
 
 type Props = { field: FieldType; onChange: (value: string) => Promise<void> };
@@ -79,9 +79,15 @@ function Words({ field, onChange, secret, masked }: Props & { secret?: boolean; 
   const shown = secret ? "" : field.value;
   const [value, setValue] = useState(shown);
   useEffect(() => setValue(shown), [shown]);
+  const pending = useRef(Promise.resolve());
+  const send = (v: string) => {
+    const next = pending.current.catch(() => {}).then(() => onChange(v));
+    pending.current = next;
+    return next;
+  };
   const commit = () => {
     if (secret && value === "") return;
-    if (value !== shown) void onChange(value).then(() => secret && setValue(""));
+    if (value !== shown) void send(value).then(() => secret && setValue(""));
   };
   const props = {
     size: "sm" as const,
@@ -93,5 +99,8 @@ function Words({ field, onChange, secret, masked }: Props & { secret?: boolean; 
   };
   if (secret) return <PasswordInput {...props} placeholder={field.value === "set" ? "Set" : field.example} />;
   if (masked) return <PasswordInput {...props} />;
-  return <TextInput {...props} />;
+  return <Stack gap="xs">
+    <TextInput {...props} />
+    {field.reset_label && <Button fullWidth size="sm" variant="light" styles={{ label: { whiteSpace: "normal" } }} style={{ height: "auto", minHeight: 36 }} onMouseDown={(e) => e.preventDefault()} onClick={() => void send("").then(() => setValue(""))}>{field.reset_label}</Button>}
+  </Stack>;
 }

@@ -391,8 +391,8 @@ func TestSettingsReadAndWriteThroughTheRegistry(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&f); err != nil {
 		t.Fatal(err)
 	}
-	if f.Value != settings.v.Password || f.Kind != "credential" {
-		t.Errorf("the password reads %+v, want the saved password as a credential", f)
+	if f.Value != "set" || f.Kind != "secret" {
+		t.Errorf("the password reads %+v, want only protected secret metadata", f)
 	}
 
 	resp = do(
@@ -484,5 +484,20 @@ func TestEventsStartWithEveryStateThenFollow(t *testing.T) {
 	if next.Type != "state" || next.State == nil ||
 		string(next.State.Value) != `{"state":"ringing"}` {
 		t.Errorf("second message %+v, want the ringing state", next)
+	}
+}
+
+func TestPageHEADRetainsOwnerAuthentication(t *testing.T) {
+	_, settings, _, srv := fixture(t)
+	response := do(t, http.MethodHead, srv.URL+Prefix+"/echo/a1", "", nil)
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Fatal("unauthenticated HEAD", response.StatusCode)
+	}
+	response.Body.Close()
+	response = do(t, http.MethodHead, srv.URL+Prefix+"/echo/a1", "", func(r *http.Request) { r.SetBasicAuth("admin", settings.v.Password) })
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil || response.StatusCode != http.StatusOK || len(body) != 0 {
+		t.Fatal("authenticated HEAD", response.StatusCode, err)
 	}
 }

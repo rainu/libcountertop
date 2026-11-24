@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/ygelfand/libcountertop/pkg/display/clockview"
 	"github.com/ygelfand/libcountertop/pkg/say"
@@ -43,6 +44,19 @@ func NewTable() *Table {
 			schema.Backings(), func(s *Setup) *schema.Backing { return &s.Clock.Backing }),
 		setting.Flag(Setting{Name: "date", Group: Group, Icon: "mdi:calendar-blank-outline"},
 			func(s *Setup) *bool { return &s.Clock.Date }),
+		setting.Pick(Setting{Name: "date_format", Group: Group, Icon: "mdi:calendar"},
+			schema.DateFormats(), func(s *Setup) *schema.DateFormat { return &s.Clock.DateFormat }),
+		{Name: "date_pattern", Group: Group, Kind: setting.Text, Icon: "mdi:calendar-edit",
+			Read: func(s *Setup) string { return s.Clock.DatePattern },
+			Write: func(s *Setup, v string) error {
+				if v != "" {
+					if _, err := schema.PatternDate(time.Now(), v); err != nil {
+						return err
+					}
+				}
+				s.Clock.DatePattern = v
+				return nil
+			}},
 	}, setting.Messages{Text: say.T, Missing: say.Missing})
 }
 
@@ -153,4 +167,17 @@ func (c *Controls) SetBacking(v schema.Backing) {
 
 func (c *Controls) SetDate(v bool) {
 	c.commit("date", func(s *Setup) { s.Clock.Date = v })
+}
+
+func (c *Controls) SetDateFormat(v schema.DateFormat) {
+	c.commit("date_format", func(s *Setup) { s.Clock.DateFormat = v })
+}
+func (c *Controls) SetDatePattern(v string) {
+	if v != "" {
+		if _, err := schema.PatternDate(time.Now(), v); err != nil {
+			slog.Warn("invalid date pattern", "error", err)
+			return
+		}
+	}
+	c.commit("date_pattern", func(s *Setup) { s.Clock.DatePattern = v })
 }

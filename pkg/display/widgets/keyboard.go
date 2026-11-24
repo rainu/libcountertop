@@ -19,9 +19,10 @@ import (
 type KeyboardSize = schema.KeyboardSize
 
 const (
-	KeyboardCompact  = schema.KeyboardCompact
-	KeyboardStandard = schema.KeyboardStandard
-	KeyboardLarge    = schema.KeyboardLarge
+	KeyboardCompact   = schema.KeyboardCompact
+	KeyboardStandard  = schema.KeyboardStandard
+	KeyboardLarge     = schema.KeyboardLarge
+	KeyboardFullWidth = schema.KeyboardFullWidth
 )
 
 type KeyboardStyle interface {
@@ -49,11 +50,8 @@ func (editor *Editor) Keyboard(w *gogui.Window, opts KeyboardOptions) (ui.Rect, 
 	pal := opts.Palette
 	vw, vh := w.WindowSize()
 	size := opts.Size
-	rowScale, textScale := keySize(size)
-	gap := style.Reach() * 0.12
-	pad := style.Reach() * 0.2
-	high := style.Reach() * rowScale
-	unit := min((float32(vw)-2*pad-9*gap)/10, high*1.6)
+	_, textScale := keySize(size)
+	high, unit, gap, pad := keyboardGeometry(float32(vw), size)
 
 	plain := pal.Background.Blend(pal.Text, 0.18)
 	special := pal.Background.Blend(pal.Text, 0.10)
@@ -262,7 +260,7 @@ func keySize(k KeyboardSize) (row, text float32) {
 	switch k {
 	case KeyboardStandard:
 		return 1, 1.15
-	case KeyboardLarge:
+	case KeyboardLarge, KeyboardFullWidth:
 		return 1.2, 1.25
 	}
 	return 0.75, 1
@@ -276,4 +274,18 @@ func keyRow(keys []gogui.View, gap float32) gogui.View {
 		HAlign:  gogui.HAlignCenter,
 		Content: keys,
 	})
+}
+
+// Full width sizes keys from the viewport rather than limiting their width by the theme.
+func keyboardGeometry(width float32, size KeyboardSize) (high, unit, gap, pad float32) {
+	rowScale, _ := keySize(size)
+	gap, pad = style.Reach()*0.12, style.Reach()*0.2
+	high = style.Reach() * rowScale
+	available := (width - 2*pad - 9*gap) / 10
+	unit = min(available, high*1.6)
+	if size == KeyboardFullWidth {
+		unit = available
+		high = unit / 1.6
+	}
+	return
 }

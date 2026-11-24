@@ -55,6 +55,12 @@ func (c *Controller) Attach(queue func(func()), handle func(Request) (View, erro
 }
 
 func (c *Controller) Call(ctx context.Context, request Request) (View, error) {
+	return c.CallGuarded(ctx, request, nil)
+}
+
+// CallGuarded checks current focus and policy on the UI queue immediately before
+// editing. A guard must not retain the private View or call this Controller.
+func (c *Controller) CallGuarded(ctx context.Context, request Request, allow func(View) bool) (View, error) {
 	if err := ctx.Err(); err != nil {
 		return View{}, err
 	}
@@ -79,6 +85,17 @@ func (c *Controller) Call(ctx context.Context, request Request) (View, error) {
 		if !active {
 			done <- result{err: ErrUnavailable}
 			return
+		}
+		if allow != nil {
+			current, err := b.handle(Request{})
+			if err != nil {
+				done <- result{err: err}
+				return
+			}
+			if !allow(current) {
+				done <- result{err: ErrUnavailable}
+				return
+			}
 		}
 		view, err := b.handle(request)
 		done <- result{view, err}

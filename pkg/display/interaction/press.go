@@ -267,3 +267,12 @@ func (p *Presses) Button(
 		Content: []gogui.View{gogui.Label(glyph, st)},
 	}, do)
 }
+
+// Cancel drops a pending press and invalidates delayed activation without firing it.
+func (p *Presses) Cancel(w *gogui.Window) {
+	p.armed = ""
+	p.pending = nil
+	p.waveGen++
+	p.wave = ripple{}
+	w.InvalidateLayout()
+}
