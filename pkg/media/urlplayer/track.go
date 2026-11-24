@@ -443,6 +443,11 @@ func (t *track) Stop() {
 }
 
 func (t *track) Fail(err error) {
+	t.player.mu.Lock()
+	if t.player.cur == t {
+		t.player.failed = true
+	}
+	t.player.mu.Unlock()
 	if !t.player.stop(t, t.player.o.Output.Stop) {
 		return
 	}

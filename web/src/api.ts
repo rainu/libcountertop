@@ -1,3 +1,4 @@
+export type VideoState = { state: string; position: number; duration: number; width: number; height: number; frames: number; seekable: boolean; error?: string };
 export type Choice = { value: string; label: string };
 
 export type Field = {
@@ -146,6 +147,8 @@ function post(path: string, body: unknown = {}) {
 }
 
 export const api = {
+ video: () => call<VideoState>("/video/"),
+ videoCommand: (request: {action: string; url?: string; position?: number}) => post("/video/", request),
   controlPair: (url: string) => call<ControlPair>("/control/pairing", json({ url })),
   controlRedeem: (code: string, signal?: AbortSignal) => call<ControlSession>("/control/pairing/redeem", { ...json({ code }), signal }),
   controlSession: (signal?: AbortSignal) => call<ControlSession>("/control/session", { signal }),

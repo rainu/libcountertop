@@ -979,3 +979,10 @@ func (o *Output) completed(p *playing, err error, unseen bool) {
 		}
 	})
 }
+
+// Active reports whether this output still owns the supplied source.
+func (o *Output) Active(src playback.Source) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.cur != nil && o.cur.src == src
+}
