@@ -47,6 +47,7 @@ type track struct {
 	picture     playback.Picture
 	length      time.Duration
 	knownLength atomic.Int64
+	snapshot    atomic.Pointer[trackSnapshot]
 	format      string
 	handed      atomic.Int64
 	waiting     atomic.Bool
@@ -73,6 +74,13 @@ func (t *track) ensureLocked() error {
 	if !t.started {
 		t.failed, t.started = t.begin(t.ctx), true
 		t.knownLength.Store(int64(t.length))
+		t.snapshot.Store(&trackSnapshot{
+			failed:   t.failed != nil,
+			width:    int(t.picture.Width),
+			height:   int(t.picture.Height),
+			duration: t.length,
+			seekable: t.seekable && !t.media.Streaming(),
+		})
 	}
 	return t.failed
 }

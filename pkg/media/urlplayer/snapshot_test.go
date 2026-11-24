@@ -92,3 +92,67 @@ func TestNativeControlsUseDecodedDurationWithoutSenderMetadata(t *testing.T) {
 		t.Fatalf("sender duration was not preserved: %v", got)
 	}
 }
+
+// A web/HA status poll must complete even while decoder input is stalled or paused.
+func TestSnapshotDoesNotWaitForTheDecoderMutex(t *testing.T) {
+	body, err := os.ReadFile("testdata/clip.mp4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &fakeOutput{}
+	p := New(Options{Output: out, Screen: true})
+	if err = p.Load(cast.Media{ContentID: serve(t, "video/mp4", body, true)}, 0, true); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	out.wait(t, "play")
+	if err = p.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	tr := p.showing()
+	tr.mu.Lock()
+	done := make(chan Snapshot, 1)
+	go func() { done <- p.Snapshot() }()
+	select {
+	case s := <-done:
+		tr.mu.Unlock()
+		if s.State != "paused" || s.Width != 64 || s.Height != 64 || s.Duration < 2 {
+			t.Fatalf("cached snapshot: %+v", s)
+		}
+	case <-time.After(time.Second):
+		tr.mu.Unlock()
+		t.Fatal("status poll blocked on the decoder mutex")
+	}
+}
+
+// Seeking must be able to replace a decoder even while its current read is blocked.
+func TestSeekDoesNotWaitForTheDecoderMutex(t *testing.T) {
+	body, err := os.ReadFile("testdata/clip.mp4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &fakeOutput{}
+	p := New(Options{Output: out, Screen: true})
+	if err = p.Load(cast.Media{ContentID: serve(t, "video/mp4", body, true)}, 0, true); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	out.wait(t, "play")
+	if err = p.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	tr := p.showing()
+	tr.mu.Lock()
+	done := make(chan error, 1)
+	go func() { done <- p.Seek(time.Second) }()
+	select {
+	case err := <-done:
+		tr.mu.Unlock()
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		tr.mu.Unlock()
+		t.Fatal("seek blocked on the decoder mutex")
+	}
+}

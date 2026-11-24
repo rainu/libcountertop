@@ -348,9 +348,9 @@ func (p *Player) seek(only *track, to time.Duration) error {
 	}
 	refused := false
 	if t.feed == nil {
-		t.mu.Lock()
-		refused = t.started && !t.seekable
-		t.mu.Unlock()
+		if meta := t.snapshot.Load(); meta != nil {
+			refused = !meta.seekable
+		}
 	}
 	at := p.Elapsed()
 	d := to - at

@@ -18,6 +18,15 @@ type Snapshot struct {
 	Error    string  `json:"error,omitempty"`
 }
 
+// Open-time decoder metadata is immutable once published. Status readers must
+// never take the decoder mutex: a paused decoder can be blocked on its queues.
+type trackSnapshot struct {
+	failed        bool
+	width, height int
+	duration      time.Duration
+	seekable      bool
+}
+
 func (p *Player) Snapshot() Snapshot {
 	p.mu.Lock()
 	t, shown, paused, failedPlayback := p.cur, p.shown, p.paused, p.failed
@@ -31,21 +40,19 @@ func (p *Player) Snapshot() Snapshot {
 	if t == nil {
 		return s
 	}
-	t.mu.Lock()
-	started, failed := t.started, t.failed
-	s.Width, s.Height, s.Duration, s.Seekable = int(
-		t.picture.Width,
-	), int(
-		t.picture.Height,
-	), t.length.Seconds(), t.seekable &&
-		!t.media.Streaming()
-	t.mu.Unlock()
+	meta := t.snapshot.Load()
+	if meta == nil {
+		s.State = "loading"
+		return s
+	}
+	s.Width, s.Height = meta.width, meta.height
+	s.Duration, s.Seekable = meta.duration.Seconds(), meta.seekable
 	s.Position = p.Elapsed().Round(time.Millisecond).Seconds()
 	s.Frames = p.Frames()
 	switch {
-	case failed != nil:
+	case meta.failed:
 		s.State, s.Error = "error", "Could not open or decode this media. Use a direct supported video or stream URL."
-	case !started || shown != t:
+	case shown != t:
 		s.State = "loading"
 	default:
 		s.State = "playing"
