@@ -87,3 +87,15 @@ func (m *Messages) settled(generation uint64, gone bool) {
 	slog.Info("message swiped away")
 	m.endLocked(End{Why: EndSwiped})
 }
+
+// CancelTouch releases only this contact without dismissing the message.
+func (m *Messages) CancelTouch(id int) {
+	m.mu.Lock()
+	if !m.swipe.held || m.swipe.id != id {
+		m.mu.Unlock()
+		return
+	}
+	m.swipe = swipe{}
+	m.mu.Unlock()
+	m.Changed.Emit(true)
+}

@@ -355,9 +355,10 @@ func (a *App) Restyle() {
 }
 
 var phases = map[touch.Phase]backend.Phase{
-	touch.Down: backend.Began,
-	touch.Move: backend.Moved,
-	touch.Up:   backend.Ended,
+	touch.Down:   backend.Began,
+	touch.Move:   backend.Moved,
+	touch.Up:     backend.Ended,
+	touch.Cancel: backend.Cancelled,
 }
 
 func (a *App) afterBoot(ctx context.Context) bool {
@@ -414,6 +415,7 @@ func (a *App) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	r.BeforeEvent = func(e *gogui.Event) { cancelTouchEvent(w, a.ui, e) }
 	r.SetRotation(int(rot) / 90)
 	if a.o.Input != nil {
 		detach := a.o.Input.Attach(
@@ -454,9 +456,16 @@ func (a *App) Run(ctx context.Context) error {
 				})
 			}
 		}
+		if t.Phase == touch.Cancel {
+			a.o.Messages.CancelTouch(t.ID)
+			delete(starts, t.ID)
+			r.Touch(backend.Cancelled, uint64(t.ID), float32(t.X), float32(t.Y))
+			return
+		}
 		if _, held := a.wakeBy(); held {
 			return
 		}
+
 		at := image.Pt(t.X, t.Y)
 		switch t.Phase {
 		case touch.Down:
@@ -606,4 +615,13 @@ func (a *App) Run(ctx context.Context) error {
 
 	slog.Info("gui: running", "size", fmt.Sprintf("%dx%d", vw, vh), "theme", a.current().Cfg.Name)
 	return r.Run(ctx, w)
+}
+
+// Cancel on the same UI event turn as the cancelled contact, not an unrelated
+// queued command which could run before an earlier buffered TouchDown.
+func cancelTouchEvent(w *gogui.Window, u *widgets.UI, e *gogui.Event) {
+	if e != nil && e.Type == gogui.EventTouchesCancelled {
+		u.Presses.Cancel(w)
+		u.Gestures.Lift()
+	}
 }

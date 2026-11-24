@@ -19,6 +19,7 @@ const (
 	Down Phase = iota
 	Move
 	Up
+	Cancel // Drop a contact without a tap, swipe or hold.
 )
 
 func (p Phase) String() string {
@@ -29,6 +30,8 @@ func (p Phase) String() string {
 		return "move"
 	case Up:
 		return "up"
+	case Cancel:
+		return "cancel"
 	}
 	return "unknown"
 }

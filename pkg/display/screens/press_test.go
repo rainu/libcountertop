@@ -57,10 +57,12 @@ func pressRig(t *testing.T, fired chan string) (*backend.Renderer, frames) {
 			)
 		})
 	})
+
 	r, err := backend.New(f, w)
 	if err != nil {
 		t.Fatal(err)
 	}
+	r.BeforeEvent = func(e *gogui.Event) { cancelTouchEvent(w, presentation, e) }
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	t.Cleanup(func() { cancel(); <-done })
@@ -115,5 +117,29 @@ func TestADragThatStartsOnARowDoesNotFireIt(t *testing.T) {
 	settle(f)
 	if len(fired) != 0 {
 		t.Errorf("%s fired after a drag", <-fired)
+	}
+}
+
+func TestCancelledPressCannotFireOnLaterLift(t *testing.T) {
+	fired := make(chan string, 4)
+	r, f := pressRig(t, fired)
+	r.Touch(backend.Began, 91, 200, 50)
+	time.Sleep(750 * time.Millisecond) // Cross the delayed long-press mouse-down threshold.
+	settle(f)                          // Let the press arm and its delayed highlight become active.
+	r.Touch(backend.Cancelled, 91, 200, 50)
+	settle(f)
+	if len(fired) != 0 {
+		t.Fatal("cancel fired a click")
+	}
+	r.Touch(backend.Began, 92, 200, 50)
+	r.Touch(backend.Ended, 92, 200, 50)
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("fresh click failed")
+	}
+	settle(f)
+	if len(fired) != 0 {
+		t.Fatal("cancelled action leaked into fresh click")
 	}
 }
