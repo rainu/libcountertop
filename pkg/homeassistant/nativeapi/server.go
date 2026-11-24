@@ -175,7 +175,11 @@ func (a *Server) register() error {
 	a.srv.Info = info
 	a.srv.Handler = esphome.Chain(append([]esphome.Handler{ents}, a.deps.Registry.Handlers()...)...)
 	if a.deps.ConcurrentActions > 0 {
-		a.srv.Handler = &actionHandler{next: a.srv.Handler, slots: make(chan struct{}, a.deps.ConcurrentActions)}
+		a.srv.Handler = &actionHandler{
+			Entities: ents,
+			next:     a.srv.Handler,
+			slots:    make(chan struct{}, a.deps.ConcurrentActions),
+		}
 	}
 	return nil
 }
