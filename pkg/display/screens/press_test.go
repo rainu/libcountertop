@@ -57,6 +57,7 @@ func pressRig(t *testing.T, fired chan string) (*backend.Renderer, frames) {
 			)
 		})
 	})
+	w.OnEvent = func(e *gogui.Event, w *gogui.Window) { cancelTouchEvent(w, presentation, e) }
 	r, err := backend.New(f, w)
 	if err != nil {
 		t.Fatal(err)
@@ -115,5 +116,27 @@ func TestADragThatStartsOnARowDoesNotFireIt(t *testing.T) {
 	settle(f)
 	if len(fired) != 0 {
 		t.Errorf("%s fired after a drag", <-fired)
+	}
+}
+
+func TestCancelledPressCannotFireOnLaterLift(t *testing.T) {
+	fired := make(chan string, 4)
+	r, f := pressRig(t, fired)
+	r.Touch(backend.Began, 91, 200, 50)
+	r.Touch(backend.Cancelled, 91, 200, 50)
+	settle(f)
+	if len(fired) != 0 {
+		t.Fatal("cancel fired a click")
+	}
+	r.Touch(backend.Began, 92, 200, 50)
+	r.Touch(backend.Ended, 92, 200, 50)
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("fresh click failed")
+	}
+	settle(f)
+	if len(fired) != 0 {
+		t.Fatal("cancelled action leaked into fresh click")
 	}
 }
