@@ -358,6 +358,16 @@ func (in *instance) opened(w *compositor.Window) {
 
 func (in *instance) event(session, method string, params json.RawMessage) {
 	if session != "" {
+		if method == "Target.detachedFromTarget" {
+			var e struct {
+				Session string `json:"sessionId"`
+			}
+			if json.Unmarshal(params, &e) == nil {
+				in.mu.Lock()
+				delete(in.pages, e.Session)
+				in.mu.Unlock()
+			}
+		}
 		in.mu.Lock()
 		p := in.pages[session]
 		in.mu.Unlock()
