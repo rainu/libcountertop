@@ -3,6 +3,7 @@ package urlplayer
 import (
 	"errors"
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -54,4 +55,24 @@ func TestSnapshotReportsOpenFailure(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	t.Fatal("opening failure not visible")
+}
+
+// Native transport controls need the decoded duration when no Cast sender supplied metadata.
+func TestNativeControlsUseDecodedDurationWithoutSenderMetadata(t *testing.T) {
+	body, err := os.ReadFile("testdata/clip.mp4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := newTrack(serve(t, "video/mp4", body, true), 0, nil)
+	defer tr.close()
+	if err := tr.ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if got := tr.Showing().Length; got < 2*time.Second || got > 2100*time.Millisecond {
+		t.Fatalf("native duration %v, want approximately two seconds", got)
+	}
+	tr.media.Duration = 3
+	if got := tr.Showing().Length; got != 3*time.Second {
+		t.Fatalf("sender duration was not preserved: %v", got)
+	}
 }

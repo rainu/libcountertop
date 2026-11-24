@@ -393,6 +393,11 @@ func (t *track) Showing() playback.Showing {
 		s.Length = t.feed.Duration()
 	case !t.media.Streaming():
 		s.Length = t.media.Length()
+		if s.Length <= 0 {
+			t.mu.Lock()
+			s.Length = t.length
+			t.mu.Unlock()
+		}
 	}
 	if followed {
 		s.Break = st.Break
