@@ -2,9 +2,11 @@ package webreceiver
 
 import (
 	"context"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
@@ -90,5 +92,25 @@ func TestWebsiteUsesBrowserIdentityAndNoCastPlatform(t *testing.T) {
 	cancel()
 	if err := y.openWebsite(ctx, "cJjMmDeOAZ4", 0, true); err == nil {
 		t.Fatal("navigation with no live page accepted")
+	}
+}
+
+func TestYouTubeProbeFailuresAreTransientButBounded(t *testing.T) {
+	var h youtubeProbeHealth
+	now := time.Unix(100, 0)
+	busy := context.DeadlineExceeded
+	for _, d := range []time.Duration{0, 3 * time.Second, 14 * time.Second} {
+		if !h.alive(now.Add(d), busy) {
+			t.Fatal("temporary renderer stall terminated playback", d)
+		}
+	}
+	if h.alive(now.Add(15*time.Second), errors.New("closed")) {
+		t.Fatal("permanent loss was not bounded")
+	}
+	if !h.alive(now.Add(16*time.Second), nil) {
+		t.Fatal("successful probe failed")
+	}
+	if !h.alive(now.Add(30*time.Second), busy) {
+		t.Fatal("recovered playback inherited old failure window")
 	}
 }

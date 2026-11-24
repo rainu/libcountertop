@@ -205,6 +205,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 }
 
 func (y *YouTube) monitor(ctx context.Context) {
+	var probes youtubeProbeHealth
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -220,9 +221,16 @@ func (y *YouTube) monitor(ctx context.Context) {
 		)
 		done()
 		if err != nil {
-			y.fail(ctx, "The YouTube player disconnected")
+			if ctx.Err() != nil {
+				return
+			}
+			if probes.alive(time.Now(), err) {
+				continue
+			}
+			y.fail(ctx, "The YouTube player did not respond for 15 seconds")
 			return
 		}
+		probes.alive(time.Now(), nil)
 		var state struct {
 			State    int
 			Error    int
@@ -380,4 +388,19 @@ func youtubeUserAgent() string {
 		}
 	}
 	return ""
+}
+
+// A busy renderer or execution-context replacement is not a disconnected player.
+// Keep successful playback alive during transient probe failures, but bound hangs.
+type youtubeProbeHealth struct{ failedAt time.Time }
+
+func (h *youtubeProbeHealth) alive(now time.Time, err error) bool {
+	if err == nil {
+		h.failedAt = time.Time{}
+		return true
+	}
+	if h.failedAt.IsZero() {
+		h.failedAt = now
+	}
+	return now.Sub(h.failedAt) < 15*time.Second
 }
