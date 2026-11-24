@@ -27,16 +27,20 @@ var youtubeHTML string
 //go:embed youtube-site.js
 var youtubeSiteJS string
 
+//go:embed youtube-tv.js
+var youtubeTVJS string
+
 // YouTube uses YouTube's official IFrame Player API. The existing media adapter
 // supplies the device decoders. Contextually refused embeds can use the official
 // full website through standard media controls, not extracted stream URLs.
 type YouTube struct {
-	r      *Receiver
-	op     sync.Mutex
-	mu     sync.Mutex
-	active bool
-	cancel context.CancelFunc
-	status urlplayer.Snapshot
+	account *YouTubeAccount
+	r       *Receiver
+	op      sync.Mutex
+	mu      sync.Mutex
+	active  bool
+	cancel  context.CancelFunc
+	status  urlplayer.Snapshot
 }
 
 func NewYouTube(env cast.Env, o Options) *YouTube {
@@ -46,13 +50,17 @@ func NewYouTube(env cast.Env, o Options) *YouTube {
 	y := &YouTube{status: urlplayer.Snapshot{State: "idle"}}
 	y.r = New(env, o)
 	y.r.youtube = y
+	y.account = newYouTubeAccount(o.Engine, y.Stop)
 	return y
 }
 
 func (y *YouTube) Run(ctx context.Context) error {
 	defer y.Stop()
+	go y.account.Run(ctx)
 	return service.Keep(ctx, "YouTube player", y.r.run)
 }
+
+func (y *YouTube) Account() *YouTubeAccount { return y.account }
 
 func (y *YouTube) Active() bool { y.mu.Lock(); defer y.mu.Unlock(); return y.active }
 
@@ -85,12 +93,27 @@ func (y *YouTube) Load(m cast.Media, at time.Duration, play bool) error {
 func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bool) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	deadline := time.Now().Add(60 * time.Second)
+	deadline := time.Now().Add(90 * time.Second)
+	tv := false
 	for {
 		if time.Now().After(deadline) {
 			y.fail(ctx, "The YouTube player did not become ready")
 			return
 		}
+		connection := y.account.Snapshot()
+		if connection.State == "error" {
+			y.fail(ctx, "Check the YouTube connection under Connected services, or sign out before playing anonymously")
+			return
+		}
+		if connection.State == "checking" {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+			continue
+		}
+		tv = connection.State == "connected"
 		y.r.mu.Lock()
 		tools := y.r.tools
 		y.r.mu.Unlock()
@@ -105,9 +128,11 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 				y.op.Unlock()
 				return
 			}
-			err := tools.Navigate(
-				"http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode(),
-			)
+			address := "http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode()
+			if tv {
+				address = "https://www.youtube.com/tv"
+			}
+			err := tools.Navigate(address)
 			y.op.Unlock()
 			if err != nil {
 				y.fail(ctx, "The YouTube player could not open")
@@ -124,7 +149,8 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 	}
 	// A load deadline does not terminate a successfully playing session.
 	loaded := false
-	website := false
+	website := tv
+	tvRouted := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -134,6 +160,16 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		if time.Now().After(deadline) {
 			y.fail(ctx, "YouTube did not start. The video may be unavailable or blocked")
 			return
+		}
+		if tv && !tvRouted {
+			bounded, done := context.WithTimeout(ctx, 3*time.Second)
+			expr := fmt.Sprintf("Boolean(location.pathname.startsWith('/tv') && document.querySelector('ytlr-avatar-lockup')?.__instance?.props?.title && window.youtubeTVLoad && (youtubeTVLoad(%q,%f,%t),true))", id, at.Seconds(), play)
+			ready, e := y.r.Eval(bounded, expr)
+			done()
+			if e != nil || ready != "true" {
+				continue
+			}
+			tvRouted = true
 		}
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		raw, err := y.r.Eval(
@@ -158,7 +194,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 			y.fail(ctx, "YouTube requires consent or sign-in on this device")
 			return
 		}
-		if website && state.Page != "/watch" {
+		if website && !tv && state.Page != "/watch" {
 			continue // Navigation is asynchronous; ignore the old embed's error.
 		}
 		if !website && (state.Error == 101 || state.Error == 150) {

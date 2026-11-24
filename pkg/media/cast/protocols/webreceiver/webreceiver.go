@@ -141,7 +141,9 @@ func (r *Receiver) run(ctx context.Context) error {
 	}
 	defer func() { _ = page.Close() }()
 	r.opened(page.Window)
-	defer page.Events.Listen(logged)()
+	if r.youtube == nil {
+		defer page.Events.Listen(logged)()
+	}
 	if r.youtube != nil {
 		if err := page.Call(
 			"Emulation.setUserAgentOverride",
@@ -149,11 +151,11 @@ func (r *Receiver) run(ctx context.Context) error {
 		); err != nil {
 			return err
 		}
-		source := "if (location.hostname === \"www.youtube.com\" && (location.pathname.startsWith(\"/embed/\") || location.pathname === \"/watch\")) {\n" + mediaHooks(
+		source := "if (location.hostname === \"www.youtube.com\" && (location.pathname.startsWith(\"/embed/\") || location.pathname === \"/watch\" || location.pathname.startsWith(\"/tv\"))) {\n" + mediaHooks(
 			r.env,
 			r.o.BusPort,
 			false,
-		) + "\nif(location.pathname === \"/watch\"){\n" + youtubeSiteJS + "\n}\n}"
+		) + "\nif(location.pathname === \"/watch\"){\n" + youtubeSiteJS + "\n}\nif(location.pathname.startsWith(\"/tv\")){\n" + youtubeTVJS + "\n}\n}"
 		if err := page.InjectFrames(ctx, source); err != nil {
 			return err
 		}
