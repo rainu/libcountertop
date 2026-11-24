@@ -411,17 +411,11 @@ func (a *App) Run(ctx context.Context) error {
 	a.ui.Reset()
 	a.preview = &widgets.LivePreview{}
 	w := gogui.SimpleWindow(a.o.Name, vw, vh, a, func(w *gogui.Window) { w.SetView(a.root) })
-	previousEvent := w.OnEvent
-	w.OnEvent = func(e *gogui.Event, w *gogui.Window) {
-		cancelTouchEvent(w, a.ui, e)
-		if previousEvent != nil {
-			previousEvent(e, w)
-		}
-	}
 	r, err := backend.New(surface.UILayer{C: c, ID: layerID}, w)
 	if err != nil {
 		return err
 	}
+	r.BeforeEvent = func(e *gogui.Event) { cancelTouchEvent(w, a.ui, e) }
 	r.SetRotation(int(rot) / 90)
 	if a.o.Input != nil {
 		detach := a.o.Input.Attach(

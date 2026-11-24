@@ -57,11 +57,12 @@ func pressRig(t *testing.T, fired chan string) (*backend.Renderer, frames) {
 			)
 		})
 	})
-	w.OnEvent = func(e *gogui.Event, w *gogui.Window) { cancelTouchEvent(w, presentation, e) }
+
 	r, err := backend.New(f, w)
 	if err != nil {
 		t.Fatal(err)
 	}
+	r.BeforeEvent = func(e *gogui.Event) { cancelTouchEvent(w, presentation, e) }
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	t.Cleanup(func() { cancel(); <-done })
@@ -123,6 +124,7 @@ func TestCancelledPressCannotFireOnLaterLift(t *testing.T) {
 	fired := make(chan string, 4)
 	r, f := pressRig(t, fired)
 	r.Touch(backend.Began, 91, 200, 50)
+	settle(f) // Let the press arm and its delayed highlight become active.
 	r.Touch(backend.Cancelled, 91, 200, 50)
 	settle(f)
 	if len(fired) != 0 {
