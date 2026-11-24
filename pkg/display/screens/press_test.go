@@ -124,7 +124,8 @@ func TestCancelledPressCannotFireOnLaterLift(t *testing.T) {
 	fired := make(chan string, 4)
 	r, f := pressRig(t, fired)
 	r.Touch(backend.Began, 91, 200, 50)
-	settle(f) // Let the press arm and its delayed highlight become active.
+	time.Sleep(750 * time.Millisecond) // Cross the delayed long-press mouse-down threshold.
+	settle(f)                          // Let the press arm and its delayed highlight become active.
 	r.Touch(backend.Cancelled, 91, 200, 50)
 	settle(f)
 	if len(fired) != 0 {
