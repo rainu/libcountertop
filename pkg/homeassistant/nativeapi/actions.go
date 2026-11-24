@@ -46,7 +46,13 @@ func (h *actionHandler) dispatch(
 		if request.GetCallId() == 0 {
 			return nil
 		}
-		return send(&api.ExecuteServiceResponse{CallId: request.GetCallId(), Success: false, ErrorMessage: "native_action_busy"})
+		return send(
+			&api.ExecuteServiceResponse{
+				CallId:       request.GetCallId(),
+				Success:      false,
+				ErrorMessage: "native_action_busy",
+			},
+		)
 	}
 	go func() {
 		defer func() { <-h.slots }()
@@ -54,7 +60,13 @@ func (h *actionHandler) dispatch(
 			if recover() != nil {
 				slog.Error("native action panicked")
 				if request.GetCallId() != 0 {
-					_ = send(&api.ExecuteServiceResponse{CallId: request.GetCallId(), Success: false, ErrorMessage: "native_action_failed"})
+					_ = send(
+						&api.ExecuteServiceResponse{
+							CallId:       request.GetCallId(),
+							Success:      false,
+							ErrorMessage: "native_action_failed",
+						},
+					)
 				}
 			}
 		}()

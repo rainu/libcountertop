@@ -31,7 +31,11 @@ func TestConcurrentActionWrapperPreservesLiveEntityStates(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
-	server := &esphome.Server{Info: esphome.Info{Name: "synthetic-video"}, Handler: h, Logger: slog.New(slog.DiscardHandler)}
+	server := &esphome.Server{
+		Info:    esphome.Info{Name: "synthetic-video"},
+		Handler: h,
+		Logger:  slog.New(slog.DiscardHandler),
+	}
 	done := make(chan struct{})
 	go func() { defer close(done); _ = server.Serve(ctx, listener) }()
 	conn, err := net.Dial("tcp", listener.Addr().String())
@@ -86,7 +90,13 @@ func TestConcurrentActionWrapperPreservesLiveEntityStates(t *testing.T) {
 		}
 		return m
 	}
-	send(&api.HelloRequest{ClientInfo: "synthetic-native-test", ApiVersionMajor: esphome.APIVersionMajor, ApiVersionMinor: esphome.APIVersionMinor})
+	send(
+		&api.HelloRequest{
+			ClientInfo:      "synthetic-native-test",
+			ApiVersionMajor: esphome.APIVersionMajor,
+			ApiVersionMinor: esphome.APIVersionMinor,
+		},
+	)
 	if _, ok := recv().(*api.HelloResponse); !ok {
 		t.Fatal("no hello")
 	}
