@@ -1,12 +1,13 @@
 package localvideo
 
 import (
-	"github.com/ygelfand/libcountertop/pkg/media/cast"
-	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ygelfand/libcountertop/pkg/media/cast"
+	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
 )
 
 type fake struct {
@@ -48,7 +49,10 @@ func TestCommandsRejectMalformedOrUnavailableActions(t *testing.T) {
 		t.Fatal("invalid request changed playback")
 	}
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("POST", "/", strings.NewReader(`{"action":"seek","position":3}`)))
+	h.ServeHTTP(
+		w,
+		httptest.NewRequest("POST", "/", strings.NewReader(`{"action":"seek","position":3}`)),
+	)
 	if w.Code != 409 {
 		t.Fatalf("nonseekable: %d", w.Code)
 	}
@@ -68,7 +72,8 @@ func TestLoadStatusStopAndSeek(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"state":"playing"`) || w.Header().Get("Cache-Control") != "no-store" {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"state":"playing"`) ||
+		w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal(w.Body.String())
 	}
 	w = httptest.NewRecorder()

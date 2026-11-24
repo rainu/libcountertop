@@ -1,8 +1,9 @@
 package urlplayer
 
 import (
-	"github.com/ygelfand/libcountertop/pkg/media/playback"
 	"time"
+
+	"github.com/ygelfand/libcountertop/pkg/media/playback"
 )
 
 // Snapshot is a URL-free view suitable for a local playback control interface.
@@ -32,7 +33,12 @@ func (p *Player) Snapshot() Snapshot {
 	}
 	t.mu.Lock()
 	started, failed := t.started, t.failed
-	s.Width, s.Height, s.Duration, s.Seekable = int(t.picture.Width), int(t.picture.Height), t.length.Seconds(), t.seekable && !t.media.Streaming()
+	s.Width, s.Height, s.Duration, s.Seekable = int(
+		t.picture.Width,
+	), int(
+		t.picture.Height,
+	), t.length.Seconds(), t.seekable &&
+		!t.media.Streaming()
 	t.mu.Unlock()
 	s.Position = p.Elapsed().Round(time.Millisecond).Seconds()
 	s.Frames = p.Frames()
@@ -43,7 +49,8 @@ func (p *Player) Snapshot() Snapshot {
 		s.State = "loading"
 	default:
 		s.State = "playing"
-		if active, ok := p.o.Output.(interface{ Active(playback.Source) bool }); ok && !active.Active(t) {
+		if active, ok := p.o.Output.(interface{ Active(playback.Source) bool }); ok &&
+			!active.Active(t) {
 			s.State = "idle"
 		} else if paused {
 			s.State = "paused"

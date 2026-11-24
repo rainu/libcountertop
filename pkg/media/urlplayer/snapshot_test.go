@@ -2,11 +2,12 @@ package urlplayer
 
 import (
 	"errors"
-	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ygelfand/libcountertop/pkg/media/cast"
 )
 
 func TestSnapshotTracksPauseFailureAndStopWithoutURLs(t *testing.T) {
@@ -43,7 +44,11 @@ func TestSnapshotTracksPauseFailureAndStopWithoutURLs(t *testing.T) {
 }
 func TestSnapshotReportsOpenFailure(t *testing.T) {
 	p := New(Options{Output: &fakeOutput{}})
-	if err := p.Load(cast.Media{ContentID: serve(t, "text/html", []byte("<html>not a video</html>"), false)}, 0, true); err != nil {
+	if err := p.Load(
+		cast.Media{ContentID: serve(t, "text/html", []byte("<html>not a video</html>"), false)},
+		0,
+		true,
+	); err != nil {
 		t.Fatal(err)
 	}
 	defer p.Stop()

@@ -36,7 +36,9 @@ func ValidURL(raw string) bool {
 		return false
 	}
 	u, err := url.Parse(raw)
-	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" && u.User == nil && u.Fragment == ""
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" &&
+		u.User == nil &&
+		u.Fragment == ""
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -76,10 +78,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "load":
 		cmd.URL = strings.TrimSpace(cmd.URL)
 		if !ValidURL(cmd.URL) {
-			http.Error(w, "Use an HTTP(S) media URL without embedded credentials or a fragment", 400)
+			http.Error(
+				w,
+				"Use an HTTP(S) media URL without embedded credentials or a fragment",
+				400,
+			)
 			return
 		}
-		err = h.player.Load(cast.Media{ContentID: cmd.URL, StreamType: cast.StreamBuffered, Metadata: cast.Metadata{Title: "Video"}}, 0, true)
+		err = h.player.Load(
+			cast.Media{
+				ContentID:  cmd.URL,
+				StreamType: cast.StreamBuffered,
+				Metadata:   cast.Metadata{Title: "Video"},
+			},
+			0,
+			true,
+		)
 	case "play":
 		err = h.player.Play()
 	case "pause":
@@ -87,7 +101,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "stop":
 		err = h.player.Stop()
 	case "seek":
-		if math.IsNaN(cmd.Position) || math.IsInf(cmd.Position, 0) || cmd.Position < 0 || cmd.Position > float64((1<<63-1)/int64(time.Second)) {
+		if math.IsNaN(cmd.Position) || math.IsInf(cmd.Position, 0) || cmd.Position < 0 ||
+			cmd.Position > float64((1<<63-1)/int64(time.Second)) {
 			http.Error(w, "Invalid playback position", 400)
 			return
 		}
@@ -101,7 +116,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		http.Error(w, "Playback command is not available for the current media", http.StatusConflict)
+		http.Error(
+			w,
+			"Playback command is not available for the current media",
+			http.StatusConflict,
+		)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
