@@ -391,7 +391,7 @@ func (in *instance) event(session, method string, params json.RawMessage) {
 			p := in.pages[e.Session]
 			delete(in.pages, e.Session)
 			in.mu.Unlock()
-			if p != nil {
+			if p != nil && p.session == e.Session {
 				p.end()
 			}
 		}

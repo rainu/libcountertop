@@ -215,7 +215,9 @@ func (b *bridge) handle(o order, payload []byte) {
 		b.r.mu.Lock()
 		b.r.url = o.URL
 		b.r.mu.Unlock()
-		b.r.sponsor.page(o.URL)
+		if b.r.youtube == nil {
+			b.r.sponsor.page(o.URL)
+		}
 	case "describe":
 		md := cast.Metadata{Title: o.Title, Artist: o.Artist, AlbumName: o.Album}
 		if o.URL != "" {

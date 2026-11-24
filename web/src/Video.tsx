@@ -23,7 +23,7 @@ export function Video() {
  const active=state.state!=="idle"&&state.state!=="error";
  return <Stack maw={760}>
   <Title order={2}>Video</Title>
-  <Text c="dimmed">Play a direct video or stream URL on this device. No Chromecast connection is needed. YouTube watch links and other website pages are not supported.</Text>
+  <Text c="dimmed">Play a direct video, stream, or public YouTube / YouTube Music video on this device. No Chromecast connection is needed.</Text>
   <Paper withBorder p="md"><Stack>
    <form onSubmit={e=>{e.preventDefault();void command("load")}}>
     <Stack>
@@ -31,7 +31,7 @@ export function Video() {
      <Button type="submit" loading={busy} disabled={!url.trim()}>Play on device</Button>
     </Stack>
    </form>
-   <Text size="sm" c="dimmed">Start with MP4 (H.264 video and AAC audio). HLS support depends on the stream's codecs. The device must be able to reach the URL.</Text>
+   <Text size="sm" c="dimmed">Use a YouTube watch or youtu.be link, or MP4 (H.264/AAC). YouTube uses its embedded player: sign-in, restricted videos and playlists are not supported; ads may play. The device must be able to reach the URL.</Text>
   </Stack></Paper>
   {(error||state.error)&&<Alert color="red" title="Playback error">{error||state.error}</Alert>}
   <Paper withBorder p="md"><Stack>

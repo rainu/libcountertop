@@ -14,6 +14,7 @@ import (
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
+	"github.com/ygelfand/libcountertop/pkg/media/youtubeurl"
 )
 
 type Player interface {
@@ -113,6 +114,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		http.Error(w, "Unknown playback action", 400)
+		return
+	}
+	if errors.Is(err, youtubeurl.ErrURL) {
+		http.Error(w, youtubeurl.ErrURL.Error(), http.StatusBadRequest)
 		return
 	}
 	if err != nil {
