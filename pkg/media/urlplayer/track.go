@@ -36,21 +36,22 @@ type track struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 
-	mu       sync.Mutex
-	started  bool
-	failed   error
-	seekable bool
-	dec      decoder
-	convert  func([]int16) []int16
-	left     []int16
-	drop     int64
-	picture  playback.Picture
-	length   time.Duration
-	format   string
-	handed   atomic.Int64
-	waiting  atomic.Bool
-	skipping atomic.Int64
-	skipped  atomic.Int64
+	mu          sync.Mutex
+	started     bool
+	failed      error
+	seekable    bool
+	dec         decoder
+	convert     func([]int16) []int16
+	left        []int16
+	drop        int64
+	picture     playback.Picture
+	length      time.Duration
+	knownLength atomic.Int64
+	format      string
+	handed      atomic.Int64
+	waiting     atomic.Bool
+	skipping    atomic.Int64
+	skipped     atomic.Int64
 
 	frameMu   sync.Mutex
 	queued    []time.Duration
@@ -71,6 +72,7 @@ func (t *track) ensure() error {
 func (t *track) ensureLocked() error {
 	if !t.started {
 		t.failed, t.started = t.begin(t.ctx), true
+		t.knownLength.Store(int64(t.length))
 	}
 	return t.failed
 }
@@ -394,9 +396,7 @@ func (t *track) Showing() playback.Showing {
 	case !t.media.Streaming():
 		s.Length = t.media.Length()
 		if s.Length <= 0 {
-			t.mu.Lock()
-			s.Length = t.length
-			t.mu.Unlock()
+			s.Length = time.Duration(t.knownLength.Load())
 		}
 	}
 	if followed {

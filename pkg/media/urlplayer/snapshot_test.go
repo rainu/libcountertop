@@ -71,6 +71,17 @@ func TestNativeControlsUseDecodedDurationWithoutSenderMetadata(t *testing.T) {
 	if got := tr.Showing().Length; got < 2*time.Second || got > 2100*time.Millisecond {
 		t.Fatalf("native duration %v, want approximately two seconds", got)
 	}
+	// UI/transport metadata must not wait on a decoder read held under tr.mu.
+	tr.mu.Lock()
+	done := make(chan struct{})
+	go func() { _ = tr.Showing(); close(done) }()
+	select {
+	case <-done:
+		tr.mu.Unlock()
+	case <-time.After(time.Second):
+		tr.mu.Unlock()
+		t.Fatal("native metadata blocked on decoder mutex")
+	}
 	tr.media.Duration = 3
 	if got := tr.Showing().Length; got != 3*time.Second {
 		t.Fatalf("sender duration was not preserved: %v", got)
