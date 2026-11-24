@@ -37,6 +37,12 @@ func ValidURL(raw string) bool {
 		return false
 	}
 	u, err := url.Parse(raw)
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.User == nil {
+		if _, youtube, _ := youtubeurl.Parse(raw); youtube {
+			// Let the common router produce the actionable YouTube validation error.
+			return true
+		}
+	}
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" &&
 		u.User == nil &&
 		u.Fragment == ""

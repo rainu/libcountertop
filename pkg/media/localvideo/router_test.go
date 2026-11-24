@@ -70,3 +70,25 @@ func TestUnsupportedYouTubeHasActionableHTTPError(t *testing.T) {
 		t.Fatal(w.Code, w.Body.String())
 	}
 }
+
+func TestPodcastAndTimestampFragmentsUseYouTubeFromHTTP(t *testing.T) {
+	for _, raw := range []string{
+		"https://music.youtube.com/podcast/cJjMmDeOAZ4",
+		"https://youtube.com/live/M7lc1UVf-VE",
+		"https://youtu.be/M7lc1UVf-VE#t=30",
+		"https://youtube.com/attribution_link?u=%2Fwatch%3Fv%3DM7lc1UVf-VE",
+	} {
+		direct, youtube := &fake{}, &fake{}
+		h := New(Route(direct, youtube))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("POST", "/", strings.NewReader(
+			`{"action":"load","url":"`+raw+`"}`,
+		)))
+		if w.Code != 204 || youtube.loads != 1 || direct.loads != 0 {
+			t.Fatalf("%s: %d, direct=%d youtube=%d", raw, w.Code, direct.loads, youtube.loads)
+		}
+	}
+	if ValidURL("https://example.com/video.mp4#t=30") {
+		t.Fatal("direct-media validation changed")
+	}
+}

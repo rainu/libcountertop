@@ -42,7 +42,7 @@ try {
  await page.getByRole("button",{name:"Stop",exact:true}).click();
  assert.deepEqual(writes.map(x=>x.action),["load","pause","play","seek","stop"]);
  assert.equal(writes[0].url,"https://example.com/test.mp4");assert.equal(writes[3].position,12);
- for(const url of ["https://www.youtube.com/watch?v=M7lc1UVf-VE","https://youtu.be/M7lc1UVf-VE","https://music.youtube.com/watch?v=M7lc1UVf-VE"]){
+ for(const url of ["https://www.youtube.com/watch?v=M7lc1UVf-VE","https://youtu.be/M7lc1UVf-VE","https://music.youtube.com/watch?v=M7lc1UVf-VE","https://music.youtube.com/podcast/cJjMmDeOAZ4","https://youtube.com/live/M7lc1UVf-VE","https://youtu.be/M7lc1UVf-VE#t=30"]){
   await page.getByLabel("Video or stream URL").fill(url);
   await page.getByRole("button",{name:"Play on device",exact:true}).click();
   assert.equal(writes.at(-1).url,url);

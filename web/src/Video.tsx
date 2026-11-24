@@ -31,7 +31,7 @@ export function Video() {
      <Button type="submit" loading={busy} disabled={!url.trim()}>Play on device</Button>
     </Stack>
    </form>
-   <Text size="sm" c="dimmed">Use a YouTube watch or youtu.be link, or MP4 (H.264/AAC). YouTube uses its embedded player: sign-in, restricted videos and playlists are not supported; ads may play. The device must be able to reach the URL.</Text>
+   <Text size="sm" c="dimmed">Paste a YouTube or YouTube Music link to a video, song, podcast episode, Short or live stream, or a direct MP4 (H.264/AAC). YouTube uses its embedded player: sign-in, restricted videos and playlists are not supported; ads may play. The device must be able to reach the URL.</Text>
   </Stack></Paper>
   {(error||state.error)&&<Alert color="red" title="Playback error">{error||state.error}</Alert>}
   <Paper withBorder p="md"><Stack>
