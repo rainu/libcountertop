@@ -2034,3 +2034,6 @@ webaccess.webdav_login: "Tên đăng nhập: owner · Mật khẩu quản trị 
 
 features.youtube: YouTube
 features.youtube.hint: Kết nối tài khoản YouTube
+
+features.smb: Video mạng SMB
+features.smb.hint: SMB 2/3

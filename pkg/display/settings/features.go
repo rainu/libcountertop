@@ -24,6 +24,7 @@ func FeaturesPage(read func() []Feature, push func(shell.View)) *shell.Page {
 			"features.cast":     2,
 			"features.airplay":  3,
 			"features.youtube":  8,
+"features.smb": 9,
 			"call.settings":     4,
 			"features.proxy":    5,
 			"features.speaker":  6,

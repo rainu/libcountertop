@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Group, NumberInput, Paper, Stack, Text, TextInput, Title } from "@mantine/core";
+import { SMBSource } from "./SMBSource";
 import { api, type VideoState } from "./api";
 
 export function Video() {
@@ -31,7 +32,7 @@ export function Video() {
      <Button type="submit" loading={busy} disabled={!url.trim()}>Play on device</Button>
     </Stack>
    </form>
-   <Text size="sm" c="dimmed">Paste a YouTube or YouTube Music link to a video, song, podcast episode, Short or live stream, or a direct MP4 (H.264/AAC). YouTube uses its official player: manage your account under Connected services → YouTube. Eligible Premium benefits use the connected account; otherwise ads may play. Restricted content and playlists are not guaranteed. The device must be able to reach the URL.</Text>
+   <Text size="sm" c="dimmed">Paste a YouTube or YouTube Music link to a video, song, podcast episode, Short or live stream, or a direct MP4 (H.264/AAC). For a configured SMB source use smb://media/folder/video.mp4. YouTube uses its official player: manage your account under Connected services → YouTube. Eligible Premium benefits use the connected account; otherwise ads may play. Restricted content and playlists are not guaranteed. The device must be able to reach the URL.</Text>
   </Stack></Paper>
   {(error||state.error)&&<Alert color="red" title="Playback error">{error||state.error}</Alert>}
   <Paper withBorder p="md"><Stack>
@@ -46,5 +47,6 @@ export function Video() {
     <Button variant="default" disabled={busy||!active||!state.seekable||position===""} onClick={()=>void command("seek")}>Seek</Button>
    </Group>
   </Stack></Paper>
+  <SMBSource />
  </Stack>;
 }

@@ -2062,3 +2062,6 @@ webaccess.webdav_login: "Username: owner · EchoLocal admin password"
 
 features.youtube: YouTube
 features.youtube.hint: Connect a YouTube account
+
+features.smb: SMB network videos
+features.smb.hint: SMB 2/3
