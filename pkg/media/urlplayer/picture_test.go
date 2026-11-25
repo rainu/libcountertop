@@ -6,11 +6,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"github.com/ygelfand/libcountertop/pkg/media/playback"
@@ -252,7 +253,9 @@ func TestInbandParametersOverrideStaleContainerSets(t *testing.T) {
 				p := newPicture(16, 16, c)
 				var data bytes.Buffer
 				for _, u := range tc.in {
-					binary.Write(&data, binary.BigEndian, uint32(len(u)))
+					if err := binary.Write(&data, binary.BigEndian, uint32(len(u))); err != nil {
+						t.Fatal(err)
+					}
 					data.Write(u)
 				}
 				p.push(t.Context(), sample{key: true, data: data.Bytes()})

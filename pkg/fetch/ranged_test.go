@@ -235,7 +235,10 @@ func TestCachedRangesSurviveUnalignedDistantSeeks(t *testing.T) {
 	}))
 	defer server.Close()
 	url := server.URL
-	r := NewRanged(t.Context(), http.DefaultClient, url, int64(len(body)), Chunks{Size: 100, Ahead: 1, Cache: 8})
+	r := NewRanged(
+		t.Context(), http.DefaultClient, url, int64(len(body)),
+		Chunks{Size: 100, Ahead: 1, Cache: 8},
+	)
 	defer r.Close()
 	for round := 0; round < 12; round++ {
 		for _, at := range []int64{37, 3037, 43, 3043} {
@@ -262,7 +265,10 @@ func TestCachedRangesSurviveUnalignedDistantSeeks(t *testing.T) {
 func TestCachedRangesRespectEOFAndEvict(t *testing.T) {
 	body := content(1099)
 	url, _ := served(t, body)
-	r := NewRanged(t.Context(), http.DefaultClient, url, int64(len(body)), Chunks{Size: 100, Ahead: 1, Cache: 2})
+	r := NewRanged(
+		t.Context(), http.DefaultClient, url, int64(len(body)),
+		Chunks{Size: 100, Ahead: 1, Cache: 2},
+	)
 	defer r.Close()
 	for _, at := range []int64{1073, 33, 519, 1073, 0} {
 		r.From(at)

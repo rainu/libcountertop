@@ -46,7 +46,10 @@ func open(ctx context.Context, client *http.Client, url string, from int64) (str
 		if req.URL.Hostname() == smburl.Host {
 			cache = 32
 		}
-		r := fetch.NewRanged(ctx, client, url, size, fetch.Chunks{Size: chunk, Ahead: ahead, Cache: cache})
+		r := fetch.NewRanged(
+			ctx, client, url, size,
+			fetch.Chunks{Size: chunk, Ahead: ahead, Cache: cache},
+		)
 		if from > 0 {
 			r.From(from)
 		}
