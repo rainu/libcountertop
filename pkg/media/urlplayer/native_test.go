@@ -85,7 +85,14 @@ func TestNativeFixtureMatrix(t *testing.T) {
 		t.Run(e.Name(), func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 			defer cancel()
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
+			p := New(
+				Options{
+					Native:   &Native{Helper: helper},
+					Screen:   true,
+					HTTP:     server.Client(),
+					Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } },
+				},
+			)
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + e.Name()}, nil, 0)
 			defer tr.close()
 			// Exercise the shared native contract independently of the primary hardware
@@ -163,7 +170,15 @@ func TestNativeFixtureMatrix(t *testing.T) {
 					t.Fatal("missing synchronization markers")
 				}
 			}
-			t.Logf("codec=%08x size=%dx%d frames=%d pcm_frames=%d duration=%v", tr.picture.Codec, tr.picture.Width, tr.picture.Height, count.Load(), samples, tr.length)
+			t.Logf(
+				"codec=%08x size=%dx%d frames=%d pcm_frames=%d duration=%v",
+				tr.picture.Codec,
+				tr.picture.Width,
+				tr.picture.Height,
+				count.Load(),
+				samples,
+				tr.length,
+			)
 			if tr.picture.Codec != playback.H264 && tr.picture.Codec != playback.RGBA {
 				t.Fatal("unexpected output")
 			}
@@ -184,7 +199,14 @@ func TestNativeFixtureRouting(t *testing.T) {
 			continue
 		}
 		t.Run(e.Name(), func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
+			p := New(
+				Options{
+					Native:   &Native{Helper: helper},
+					Screen:   true,
+					HTTP:     server.Client(),
+					Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } },
+				},
+			)
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + e.Name()}, nil, 0)
 			defer tr.close()
 			if err := tr.begin(tr.ctx); err != nil {
@@ -212,7 +234,14 @@ func TestNativeSeekAndStop(t *testing.T) {
 	defer server.Close()
 	for _, name := range []string{"asf-wmv2-wma2.wmv", "avi-h264-mp3.avi"} {
 		t.Run(name, func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
+			p := New(
+				Options{
+					Native:   &Native{Helper: helper},
+					Screen:   true,
+					HTTP:     server.Client(),
+					Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } },
+				},
+			)
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, time.Second)
 			defer tr.close()
 			if err := tr.openNative(tr.ctx); err != nil {
@@ -248,7 +277,14 @@ func TestNativeBoundaries(t *testing.T) {
 	defer server.Close()
 	for _, name := range []string{"oversize.avi", "overrate.avi", "data.mp4"} {
 		t.Run(name, func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
+			p := New(
+				Options{
+					Native:   &Native{Helper: helper},
+					Screen:   true,
+					HTTP:     server.Client(),
+					Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } },
+				},
+			)
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, 0)
 			defer tr.close()
 			err := tr.begin(tr.ctx)

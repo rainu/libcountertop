@@ -176,10 +176,17 @@ func readNative(r io.Reader) (nativeRecord, error) {
 		return nativeRecord{}, err
 	}
 	kind, n := binary.LittleEndian.Uint32(h[4:]), binary.LittleEndian.Uint32(h[8:])
-	if binary.LittleEndian.Uint32(h[:]) != 0x31564c45 || binary.LittleEndian.Uint32(h[12:]) != 0 || kind < 1 || kind > 5 || n > 4<<20 {
+	if binary.LittleEndian.Uint32(h[:]) != 0x31564c45 || binary.LittleEndian.Uint32(h[12:]) != 0 ||
+		kind < 1 ||
+		kind > 5 ||
+		n > 4<<20 {
 		return nativeRecord{}, nativeFailure("HELPER_PROTOCOL")
 	}
-	rec := nativeRecord{kind: kind, at: int64(binary.LittleEndian.Uint64(h[16:])), data: make([]byte, n)}
+	rec := nativeRecord{
+		kind: kind,
+		at:   int64(binary.LittleEndian.Uint64(h[16:])),
+		data: make([]byte, n),
+	}
 	_, err := io.ReadFull(r, rec.data)
 	return rec, err
 }
@@ -211,11 +218,16 @@ func (d *nativeDecoder) run(r io.Reader, w, h int, codec uint32) {
 				err = nativeFailure("HELPER_PROTOCOL")
 				return
 			}
-			if rec.at != -1<<63 && (rec.at < -60*int64(time.Second/time.Microsecond) || rec.at > int64(30*24*time.Hour/time.Microsecond)) {
+			if rec.at != -1<<63 &&
+				(rec.at < -60*int64(time.Second/time.Microsecond) || rec.at > int64(30*24*time.Hour/time.Microsecond)) {
 				err = nativeFailure("HELPER_PROTOCOL")
 				return
 			}
-			a := nativeAudio{data: make([]int16, len(rec.data)/2), at: time.Duration(rec.at) * time.Microsecond, tail: rec.at == -1<<63}
+			a := nativeAudio{
+				data: make([]int16, len(rec.data)/2),
+				at:   time.Duration(rec.at) * time.Microsecond,
+				tail: rec.at == -1<<63,
+			}
 			for i := range a.data {
 				a.data[i] = int16(binary.LittleEndian.Uint16(rec.data[i*2:]))
 			}
@@ -226,7 +238,9 @@ func (d *nativeDecoder) run(r io.Reader, w, h int, codec uint32) {
 				return
 			}
 		case 3:
-			if rec.at < -60*int64(time.Second/time.Microsecond) || rec.at > int64(30*24*time.Hour/time.Microsecond) || (codec == playback.RGBA && len(rec.data) != w*h*4) {
+			if rec.at < -60*int64(time.Second/time.Microsecond) ||
+				rec.at > int64(30*24*time.Hour/time.Microsecond) ||
+				(codec == playback.RGBA && len(rec.data) != w*h*4) {
 				err = nativeFailure("HELPER_PROTOCOL")
 				return
 			}
@@ -310,7 +324,15 @@ func (t *track) openNative(ctx context.Context) error {
 		return err
 	}
 	processCtx, cancel := context.WithCancel(ctx)
-	d := &nativeDecoder{ctx: ctx, cancel: cancel, source: s.body, audio: make(chan nativeAudio, 64), video: make(chan nativeFrame, 6), done: make(chan struct{}), cursor: int64(t.at.Seconds() * outRate)}
+	d := &nativeDecoder{
+		ctx:    ctx,
+		cancel: cancel,
+		source: s.body,
+		audio:  make(chan nativeAudio, 64),
+		video:  make(chan nativeFrame, 6),
+		done:   make(chan struct{}),
+		cursor: int64(t.at.Seconds() * outRate),
+	}
 	var reqR, reqW, respR, respW *os.File
 	if reqR, reqW, err = os.Pipe(); err == nil {
 		respR, respW, err = os.Pipe()
@@ -334,7 +356,13 @@ func (t *track) openNative(ctx context.Context) error {
 	if s.ranged != nil {
 		seekable = "1"
 	}
-	d.cmd = exec.CommandContext(processCtx, t.player.o.Native.Helper, strconv.FormatInt(s.size, 10), seekable, strconv.FormatInt(t.at.Microseconds(), 10))
+	d.cmd = exec.CommandContext(
+		processCtx,
+		t.player.o.Native.Helper,
+		strconv.FormatInt(s.size, 10),
+		seekable,
+		strconv.FormatInt(t.at.Microseconds(), 10),
+	)
 	d.cmd.ExtraFiles = []*os.File{reqW, respR}
 	stdout, err := d.cmd.StdoutPipe()
 	if err != nil {
@@ -369,10 +397,18 @@ func (t *track) openNative(ctx context.Context) error {
 		}
 		return err
 	}
-	w, h := int(binary.LittleEndian.Uint32(meta.data)), int(binary.LittleEndian.Uint32(meta.data[4:]))
+	w, h := int(
+		binary.LittleEndian.Uint32(meta.data),
+	), int(
+		binary.LittleEndian.Uint32(meta.data[4:]),
+	)
 	codec := binary.LittleEndian.Uint32(meta.data[8:])
 	length := int64(binary.LittleEndian.Uint64(meta.data[16:]))
-	if w < 1 || h < 1 || w > 1920 || h > 1080 || (codec != playback.H264 && codec != playback.RGBA) || (codec == playback.RGBA && (w > 854 || h > 480)) || length < 0 || length > int64(30*24*time.Hour/time.Microsecond) {
+	if w < 1 || h < 1 || w > 1920 || h > 1080 ||
+		(codec != playback.H264 && codec != playback.RGBA) ||
+		(codec == playback.RGBA && (w > 854 || h > 480)) ||
+		length < 0 ||
+		length > int64(30*24*time.Hour/time.Microsecond) {
 		d.Close()
 		_ = d.cmd.Wait()
 		return nativeFailure("HELPER_PROTOCOL")
