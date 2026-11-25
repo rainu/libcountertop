@@ -35,7 +35,6 @@ export function YouTubeService({ onSignedOut }: { onSignedOut: (error: unknown) 
    <Text>Scan the QR code or open the website on your phone or computer, enter this code and confirm with Google:</Text>
    <Code block style={{fontSize:"1.6rem",letterSpacing:2}}>{state.code}</Code>
    {state.expires_at&&<Text size="sm">Use before {new Date(state.expires_at).toLocaleTimeString()}. If Google rejects the code, try again.</Text>}
-   <Text size="sm" c="dimmed">Never enter your Google password here. Cancel closes this local sign-in flow; it cannot undo a confirmation already completed at Google.</Text>
   </Stack>}
   {(error||state.error)&&<Alert color="red">{error||state.error}</Alert>}
   <Group>
