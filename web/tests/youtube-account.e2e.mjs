@@ -87,6 +87,22 @@ try {
  console.log("PASS YouTube service placement, activation, cancel, expiry/retry, Premium, sign-out confirmation and mobile width");
  // The TV bridge drives a real HTML media element, never external services.
  const bridge=tvBridge;
+ // A route that creates no video must be retried, but never indefinitely.
+ const missing=await browser.newPage();
+ await missing.clock.install();
+ await missing.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:"<ytlr-avatar-lockup></ytlr-avatar-lockup>"}));
+ await missing.addInitScript(bridge);await missing.goto("https://www.youtube.com/tv");
+ await missing.evaluate(()=>youtubeTVLoad("TEST0000000",0,true));
+ assert.equal(await missing.evaluate(()=>__youtubeTVRequest.routes),1);
+ for(const routes of [2,3]){
+  await missing.clock.fastForward(8500);await missing.clock.fastForward(300);
+  assert.equal(await missing.evaluate(()=>__youtubeTVRequest.routes),routes);
+  assert.ok((await missing.evaluate(()=>location.hash)).includes("TEST0000000"));
+ }
+ await missing.clock.fastForward(9000);
+ assert.equal(await missing.evaluate(()=>__youtubeTVRequest.routes),3);
+ await missing.close();
+
  const data=Buffer.alloc(44+8000*12*2);data.write("RIFF");data.writeUInt32LE(data.length-8,4);data.write("WAVEfmt ",8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(8000,24);data.writeUInt32LE(16000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write("data",36);data.writeUInt32LE(data.length-44,40);
  for(const play of [true,false]){
   const p=await browser.newPage();
