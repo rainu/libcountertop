@@ -12,16 +12,30 @@ try {
  let state={state:"disconnected",premium:false};const writes=[];
  await page.route("**/api/v1/**",async route=>{
   const req=route.request(),p=new URL(req.url()).pathname;let data={};
-  if(p.endsWith("/device"))data={name:"Test",pages:["video","youtube"],screen:true,wifi:false};
-  else if(p.endsWith("/settings"))data=[{domain:"sendspin",section_key:"settings.features",section:"Connected services",fields:[{id:"sendspin.enabled",name:"enabled",title:"Sendspin",group:"Sendspin",kind:"toggle",value:"off"}]}];
+  if(p.endsWith("/device"))data={name:"Test",pages:["video","youtube","smb"],screen:true,wifi:false};
+  else if(p.endsWith("/settings"))data=[];
   else if(p.endsWith("/entities"))data=[];
+  else if(p.endsWith("/smb/"))data={enabled:false,host:"",port:445,share:"",username:"",domain:"",password_set:false,labels:JSON.parse(await readFile(new URL("./smb-labels.json",import.meta.url),"utf8")).en};
+  else if(p.endsWith("/video/"))data={state:"idle",position:0,duration:0,width:0,height:0,frames:0,seekable:false};
   else if(p.endsWith("/youtube/")){
    if(req.method()==="POST"){const a=req.postDataJSON().action;writes.push(a);state=a==="connect"?{state:"linking",premium:false,code:"TEST-ONLY-1234",verification_url:"https://yt.be/activate",expires_at:new Date(Date.now()+60000).toISOString()}:a==="disconnect"?{state:"disconnected",premium:false}:a==="cancel"?{state:"disconnected",premium:false}:state;await route.fulfill({status:202,json:{}});return;}data=state;
   }
   await route.fulfill({json:data});
  });
  await page.goto("http://127.0.0.1:"+server.address().port+"/#features");
+ await page.getByRole("heading",{name:"Connected services",exact:true}).waitFor();
+ const nav=page.getByRole("navigation");
+ await nav.getByText("YouTube",{exact:true}).click();
  const card=page.getByTestId("youtube-service");
+ await card.waitFor();
+ await page.getByTestId("smb-source").waitFor();
+ await nav.getByText("Video",{exact:true}).click();
+ await page.getByLabel("Video or stream URL").waitFor();
+ assert.equal(await card.count(),0);
+ assert.equal(await page.getByTestId("smb-source").count(),0);
+ await nav.getByText("Connected services",{exact:true}).click();
+ await nav.getByText("SMB",{exact:true}).click();
+ await page.getByTestId("smb-source").waitFor();
  await card.getByRole("button",{name:"Sign in with Google",exact:true}).click();
  await card.getByText("TEST-ONLY-1234",{exact:true}).waitFor();
  const link=card.getByRole("link",{name:"yt.be/activate",exact:true});
@@ -60,6 +74,7 @@ try {
  await card.getByText("Not connected",{exact:true}).waitFor();
  assert.deepEqual(writes,["connect","cancel","connect","disconnect"]);
  await page.setViewportSize({width:390,height:844});
+ await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth);
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.close();
  // First-party labels are localized; none of these may claim authentication.

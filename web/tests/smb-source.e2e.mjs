@@ -32,7 +32,7 @@ try{
    }
    await route.fulfill({json:data});
   });
-  await page.goto("http://127.0.0.1:"+server.address().port+"/#video");
+  await page.goto("http://127.0.0.1:"+server.address().port+"/#features");
   const box=page.getByTestId("smb-source"),l=labels[lang];
   await box.getByLabel(l.host,{exact:true}).fill("server.example");
   await box.getByLabel(l.share,{exact:true}).fill("videos");
@@ -49,9 +49,6 @@ try{
   await page.reload();
   await box.getByText(l.password_set,{exact:true}).waitFor();
   assert.equal(await box.getByLabel(l.password,{exact:true}).inputValue(),"");
-  await page.getByLabel("Video or stream URL").fill("smb://media/folder/video.mp4");
-  await page.getByRole("button",{name:"Play on device",exact:true}).click();
-  assert.equal(writes.at(-1).url,"smb://media/folder/video.mp4");
   await box.getByRole("button",{name:l.clear,exact:true}).click();
   await box.getByText(l.password_unset,{exact:true}).waitFor();
   assert.equal(writes.at(-1).clear_password,true);
@@ -60,6 +57,11 @@ try{
 await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth);
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.goto("http://127.0.0.1:"+server.address().port+"/#video");
+  await page.getByLabel("Video or stream URL").fill("smb://media/folder/video.mp4");
+  assert.equal(await box.count(),0,"SMB configuration is not on the playback page");
+  await page.getByRole("button",{name:"Play on device",exact:true}).click();
+  assert.equal(writes.at(-1).url,"smb://media/folder/video.mp4");
   assert.deepEqual(errors,[]);
   await page.close();
  }

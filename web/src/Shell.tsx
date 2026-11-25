@@ -1,3 +1,4 @@
+import { SMBSource } from "./SMBSource";
 import { YouTubeService } from "./YouTubeService";
 import { Video } from "./Video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -162,7 +163,7 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
     [refresh],
   );
 
-  const all = useMemo(() => sections(domains), [domains]);
+  const all = useMemo(() => sections(domains, device.pages ?? []), [domains, device.pages]);
   const current = all.find((s) => s.slug === open);
   const apps = appPages.filter((a) => device.pages?.includes(a.slug));
   const app = apps.find((a) => a.slug === open)?.slug;
@@ -283,7 +284,8 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
             section={current}
             focus={focus}
             change={change}
-            extra={current.key === "settings.features" && device.pages?.includes("youtube") ? <YouTubeService onSignedOut={signedOut} /> : current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
+            services={{ smb: <SMBSource />, youtube: <YouTubeService onSignedOut={signedOut} /> }}
+            extra={current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
           />
         ) : app === "video" ? (
           <Video />

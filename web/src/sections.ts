@@ -13,7 +13,8 @@ import {
 import type { Domain, Field } from "./api";
 
 export type Entry = { domain: string; field: Field };
-export type Group = { title: string; entries: Entry[] };
+export type Service = "smb" | "youtube";
+export type Group = { title: string; entries: Entry[]; service?: Service };
 export type Section = { key: string; slug: string; title: string; icon: Icon; groups: Group[]; count: number };
 
 const icons: Record<string, Icon> = {
@@ -36,7 +37,7 @@ function slugOf(key: string): string {
   return key.split(".").find((p) => p !== "settings" && p !== "title" && p !== "page") ?? key;
 }
 
-export function sections(domains: Domain[]): Section[] {
+export function sections(domains: Domain[], pages: string[] = []): Section[] {
   const out: Section[] = [];
   const byKey = new Map<string, Section>();
   for (const d of domains) {
@@ -62,6 +63,18 @@ export function sections(domains: Domain[]): Section[] {
       }
       g.entries.push({ domain: d.domain, field });
       s.count++;
+    }
+  }
+  const services = (["smb", "youtube"] as const).filter((service) => pages.includes(service));
+  if (services.length) {
+    let connected = byKey.get("settings.features");
+    if (!connected) {
+      connected = { key: "settings.features", slug: "features", title: "Connected services", icon: IconPlug, groups: [], count: 0 };
+      out.push(connected);
+    }
+    for (const service of services) {
+      connected.groups.push({ title: service === "youtube" ? "YouTube" : "SMB", entries: [], service });
+      connected.count++;
     }
   }
   return out.filter((s) => s.count > 0);
