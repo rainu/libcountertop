@@ -32,7 +32,7 @@ export function SMBSource(){
    {(["share","username","domain"] as const).map(k=><TextInput key={k} label={t(k)} value={value[k]} autoComplete="off" maxLength={255} required={value.enabled&&k!=="domain"} onChange={e=>change(k,e.currentTarget.value)} />)}
    <PasswordInput label={t("password")} value={password} autoComplete="new-password" onChange={e=>setPassword(e.currentTarget.value)} maxLength={1024} />
    <Text size="sm">{t(value.password_set?"password_set":"password_unset")}</Text>
-   <Group><Button type="submit" loading={busy}>{t("save")}</Button><Button variant="light" color="red" disabled={busy} onClick={()=>void save(true)}>{t("clear")}</Button></Group>
+   <Group><Button style={{maxWidth:"100%",height:"auto",minHeight:36}} styles={{label:{whiteSpace:"normal",overflowWrap:"anywhere"}}} type="submit" loading={busy}>{t("save")}</Button><Button style={{maxWidth:"100%",height:"auto",minHeight:36}} styles={{label:{whiteSpace:"normal",overflowWrap:"anywhere"}}} variant="light" color="red" disabled={busy} onClick={()=>void save(true)}>{t("clear")}</Button></Group>
   </Stack></form></>}
   {error&&<Alert color="red" title={t("error")}>{error}</Alert>}
   {notice&&<Text role="status">{notice}</Text>}
