@@ -14,7 +14,12 @@ var ErrURL = errors.New("Use smb://media/folder/video.mp4 without credentials, q
 
 func Parse(raw string) (string, error) {
 	u, e := url.Parse(raw)
-	if e != nil || len(raw) > 4096 || u.Scheme != "smb" || u.Host != "media" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" || !strings.HasPrefix(u.Path, "/") {
+	if e != nil || len(raw) > 4096 || u.Scheme != "smb" || u.Host != "media" || u.User != nil ||
+		u.RawQuery != "" ||
+		u.ForceQuery ||
+		u.Fragment != "" ||
+		u.Opaque != "" ||
+		!strings.HasPrefix(u.Path, "/") {
 		return "", ErrURL
 	}
 	p := strings.TrimPrefix(u.Path, "/")
@@ -33,7 +38,8 @@ func Path(p string) bool {
 		}
 	}
 	for _, s := range strings.Split(p, "/") {
-		if s == "" || s == "." || s == ".." || strings.HasSuffix(s, ".") || strings.HasSuffix(s, " ") {
+		if s == "" || s == "." || s == ".." || strings.HasSuffix(s, ".") ||
+			strings.HasSuffix(s, " ") {
 			return false
 		}
 	}
