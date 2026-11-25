@@ -27,15 +27,27 @@ try {
  const link=card.getByRole("link",{name:"yt.be/activate",exact:true});
  assert.equal(await link.getAttribute("href"),"https://yt.be/activate");
  assert.equal(await link.getAttribute("referrerpolicy"),"no-referrer");
+ const qr=card.getByRole("img",{name:"YouTube activation website QR code"});
+ await qr.waitFor();
+ for(const viewport of [{width:1100,height:950},{width:390,height:844}]){
+  await page.setViewportSize(viewport);
+  const lb=await link.boundingBox(),qb=await qr.boundingBox();
+  assert.ok(qb.x>=lb.x+lb.width,"QR stays right of the activation URL");
+  assert.equal(qb.width,144);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ }
+ await page.setViewportSize({width:1100,height:950});
  await card.getByRole("button",{name:"Cancel sign-in",exact:true}).click();
  await card.getByText("Not connected",{exact:true}).waitFor();
  assert.equal(await card.getByText("TEST-ONLY-1234",{exact:true}).count(),0);
+ assert.equal(await qr.count(),0);
  state={state:"expired",premium:false};
  await card.getByRole("button",{name:"Try again",exact:true}).click();
  await card.getByText("TEST-ONLY-1234",{exact:true}).waitFor();
  state={state:"connected",premium:true};
  await card.getByText("Premium",{exact:true}).waitFor();
  assert.equal(await card.getByText("TEST-ONLY-1234",{exact:true}).count(),0);
+ assert.equal(await qr.count(),0);
  await card.getByRole("button",{name:"Sign out on this device",exact:true}).click();
  const dialog=page.getByRole("dialog");
  await dialog.getByRole("button",{name:"Cancel",exact:true}).click();

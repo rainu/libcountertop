@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Code, Group, Modal, Paper, Stack, Text, Title } from "@mantine/core";
+import { YouTubeActivationQR } from "./YouTubeActivationQR";
 import { api, SignedOut, type YouTubeConnection } from "./api";
 
 export function YouTubeService({ onSignedOut }: { onSignedOut: (error: unknown) => void }) {
@@ -30,7 +31,8 @@ export function YouTubeService({ onSignedOut }: { onSignedOut: (error: unknown) 
   <Text role="status">{labels[state.state]||"Connection unavailable"}</Text>
   <Text size="sm" c="dimmed">Connect this device to your YouTube account. The player uses this connection for eligible YouTube Premium benefits.</Text>
   {state.code&&state.state==="linking"&&<Stack gap="xs">
-   <Text>Open <a href="https://yt.be/activate" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">yt.be/activate</a> on your phone or computer, enter this code and confirm with Google:</Text>
+   <Group wrap="nowrap" align="center" gap="md"><Text style={{flex:1,minWidth:0,overflowWrap:"anywhere"}}><a href="https://yt.be/activate" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">yt.be/activate</a></Text><YouTubeActivationQR /></Group>
+   <Text>Scan the QR code or open the website on your phone or computer, enter this code and confirm with Google:</Text>
    <Code block style={{fontSize:"1.6rem",letterSpacing:2}}>{state.code}</Code>
    {state.expires_at&&<Text size="sm">Use before {new Date(state.expires_at).toLocaleTimeString()}. If Google rejects the code, try again.</Text>}
    <Text size="sm" c="dimmed">Never enter your Google password here. Cancel closes this local sign-in flow; it cannot undo a confirmation already completed at Google.</Text>
