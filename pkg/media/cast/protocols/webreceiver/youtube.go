@@ -95,6 +95,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 	defer ticker.Stop()
 	deadline := time.Now().Add(90 * time.Second)
 	tv := false
+	var tvOpened time.Time
 	for {
 		if time.Now().After(deadline) {
 			y.fail(ctx, "The YouTube player did not become ready")
@@ -102,7 +103,10 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		}
 		connection := y.account.Snapshot()
 		if connection.State == "error" {
-			y.fail(ctx, "Check the YouTube connection under Connected services, or sign out before playing anonymously")
+			y.fail(
+				ctx,
+				"Check the YouTube connection under Connected services, or sign out before playing anonymously",
+			)
 			return
 		}
 		if connection.State == "checking" {
@@ -131,6 +135,7 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 			address := "http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode()
 			if tv {
 				address = "https://www.youtube.com/tv"
+				tvOpened = time.Now()
 			}
 			err := tools.Navigate(address)
 			y.op.Unlock()
@@ -162,8 +167,16 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 			return
 		}
 		if tv && !tvRouted {
+			if time.Since(tvOpened) < 12*time.Second {
+				continue
+			}
 			bounded, done := context.WithTimeout(ctx, 3*time.Second)
-			expr := fmt.Sprintf("Boolean(location.pathname.startsWith('/tv') && document.querySelector('ytlr-avatar-lockup')?.__instance?.props?.title && window.youtubeTVLoad && (youtubeTVLoad(%q,%f,%t),true))", id, at.Seconds(), play)
+			expr := fmt.Sprintf(
+				"Boolean(location.pathname.startsWith('/tv') && document.querySelector('ytlr-avatar-lockup')?.__instance?.props?.title && window.youtubeTVLoad && (youtubeTVLoad(%q,%f,%t),true))",
+				id,
+				at.Seconds(),
+				play,
+			)
 			ready, e := y.r.Eval(bounded, expr)
 			done()
 			if e != nil || ready != "true" {

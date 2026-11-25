@@ -6,23 +6,33 @@
  const advertising=()=>player()?.isAdActive===true;
  window.youtubeStatus={ready:false,state:-1,error:0,site:true};
  window.youtubeTVLoad=(id,start,play)=>{
-  window.__youtubeTVRequest={id,start,play};
+  window.__youtubeTVRequest={id,start,play,at:Date.now(),lastRoute:Date.now(),routes:1};
   location.hash="/watch?v="+encodeURIComponent(id);
  };
  window.youtubePlayer={
   getCurrentTime(){return video()?.currentTime||0;},
   getDuration(){const d=video()?.duration;return !advertising()&&Number.isFinite(d)?d:0;},
-  playVideo(){player()?.play?.();const v=video();if(v)Promise.resolve(v.play()).catch(()=>{window.youtubeStatus.error=-1;});},
+  playVideo(){player()?.play?.();const v=video();if(v&&v.currentSrc)Promise.resolve(v.play()).catch(()=>{window.youtubeStatus.error=-1;});},
   pauseVideo(){player()?.pause?.();video()?.pause();},
   seekTo(t){const v=video();if(v&&!advertising())v.currentTime=t;}
  };
- let applied=false,ended=false;
+ let applied=false,ended=false,kicked=0;
  document.addEventListener("ended",e=>{if(e.target===video()&&!advertising())ended=true},true);
  setInterval(()=>{
   const v=video(),s=window.youtubeStatus,request=window.__youtubeTVRequest;
   if(!request){if(v&&!v.paused)v.pause();return;} // never autoplay TV home recommendations
   s.ready=!!v;
   if(!v)return;
+  if(!applied&&!v.currentSrc&&Date.now()-request.lastRoute>8000&&request.routes<3){
+   request.lastRoute=Date.now();request.routes++;
+   location.hash="";
+   setTimeout(()=>location.hash="/watch?v="+encodeURIComponent(request.id),250);
+  }
+  // The TV application must initiate its first load before decoder metadata
+  // exists. Waiting for readyState first deadlocks startup on the real device.
+  if(!applied&&v.readyState<1&&Date.now()-kicked>2000){
+   kicked=Date.now();player()?.play?.();
+  }
   if(!applied&&v.readyState>=1&&!advertising()){
    applied=true;
    if(request.start>0)v.currentTime=request.start;

@@ -40,7 +40,7 @@ export function YouTubeService({ onSignedOut }: { onSignedOut: (error: unknown) 
    {state.state!=="connected"&&<Button disabled={busy||state.state==="checking"} onClick={()=>void command("connect")}>{state.state==="linking"||state.state==="expired"||state.state==="error"?"Try again":"Sign in with Google"}</Button>}
    <Button variant="default" disabled={busy} onClick={()=>void command("refresh")}>Check connection</Button>
    {state.state==="linking"&&<Button variant="default" disabled={busy} onClick={()=>void command("cancel")}>Cancel sign-in</Button>}
-   {state.state==="connected"&&<Button color="red" variant="light" disabled={busy} onClick={()=>setConfirm(true)}>Sign out on this device</Button>}
+   {(state.state==="connected"||state.state==="error")&&<Button color="red" variant="light" disabled={busy} onClick={()=>setConfirm(true)}>Sign out on this device</Button>}
   </Group>
   <Modal opened={confirm} onClose={()=>setConfirm(false)} title="Sign out of YouTube">
    <Stack><Text>Remove the local YouTube session and consent data on this device? Playback stops. Your Google account and subscription are unchanged. This does not revoke the device’s authorization at Google.</Text>

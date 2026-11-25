@@ -33,7 +33,12 @@ type YouTubeAccount struct {
 }
 
 func newYouTubeAccount(host *engine.Host, stop func() error) *YouTubeAccount {
-	return &YouTubeAccount{host: host, stop: stop, commands: make(chan string, 1), state: YouTubeConnection{State: "checking"}}
+	return &YouTubeAccount{
+		host:     host,
+		stop:     stop,
+		commands: make(chan string, 1),
+		state:    YouTubeConnection{State: "checking"},
+	}
 }
 func (a *YouTubeAccount) Snapshot() YouTubeConnection {
 	a.mu.Lock()
@@ -69,11 +74,12 @@ func (a *YouTubeAccount) Command(action string) error {
 const youtubeAccountJS = `JSON.stringify((()=>{
  if(location.hostname!=="www.youtube.com" || !location.pathname.startsWith("/tv")) return {};
  const av=document.querySelector("ytlr-avatar-lockup")?.__instance?.props||{};
- const signedIn=!!av.title&&!/^sign in$/i.test(av.title);
+ const signIn=/^(sign in|anmelden|accedi|đăng nhập|guest|gast|ospite|khách)$/i.test((av.title||"").trim());
+ const signedIn=!!av.title&&!signIn;
  const logo=document.querySelector("ytlr-logo-entity");
  const t=document.body?.innerText||"";
  const m=t.includes("yt.be/activate")?t.match(/\b[A-Z0-9]{3,5}(?:-[A-Z0-9]{3,5}){1,3}\b/):null;
- return {signedIn,signIn:/^sign in$/i.test(av.title),premium:signedIn&&!!logo&&/premium/i.test(logo.outerHTML),code:m?m[0]:""};
+ return {signedIn,signIn,premium:signedIn&&!!logo&&/premium/i.test(logo.outerHTML),code:m?m[0]:""};
 })())`
 
 type youtubeAccountProbe struct {
@@ -124,7 +130,12 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 		defer cancel()
 		p, err := a.host.Open(bounded, "youtube-account")
 		if err != nil {
-			a.set(YouTubeConnection{State: "error", Error: "Could not open the YouTube connection. Try again."})
+			a.set(
+				YouTubeConnection{
+					State: "error",
+					Error: "Could not open the YouTube connection. Try again.",
+				},
+			)
 			return
 		}
 		page = p
@@ -139,7 +150,9 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 		} {
 			if _, err = page.Request(bounded, call.method, call.params); err != nil {
 				closePage()
-				a.set(YouTubeConnection{State: "error", Error: "Could not open YouTube. Try again."})
+				a.set(
+					YouTubeConnection{State: "error", Error: "Could not open YouTube. Try again."},
+				)
 				return
 			}
 		}
@@ -180,17 +193,30 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 					continue
 				}
 				bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
-				_, navErr := page.Request(bounded, "Page.navigate", map[string]any{"url": "about:blank"})
+				_, navErr := page.Request(
+					bounded,
+					"Page.navigate",
+					map[string]any{"url": "about:blank"},
+				)
 				cancel()
 				if navErr != nil {
 					closePage()
-					a.set(YouTubeConnection{State: "error", Error: "Local sign-out could not be completed. Try again."})
+					a.set(
+						YouTubeConnection{
+							State: "error",
+							Error: "Local sign-out could not be completed. Try again.",
+						},
+					)
 					continue
 				}
 				ok := true
 				for _, origin := range []string{"https://www.youtube.com", "https://youtube.com", "https://music.youtube.com"} {
 					bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
-					_, err := page.Request(bounded, "Storage.clearDataForOrigin", map[string]any{"origin": origin, "storageTypes": "all"})
+					_, err := page.Request(
+						bounded,
+						"Storage.clearDataForOrigin",
+						map[string]any{"origin": origin, "storageTypes": "all"},
+					)
 					cancel()
 					if err != nil {
 						ok = false
@@ -199,7 +225,12 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 				}
 				if !ok {
 					closePage()
-					a.set(YouTubeConnection{State: "error", Error: "Local sign-out could not be completed. Try again."})
+					a.set(
+						YouTubeConnection{
+							State: "error",
+							Error: "Local sign-out could not be completed. Try again.",
+						},
+					)
 					continue
 				}
 				open()
@@ -211,12 +242,21 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 			select {
 			case <-page.Done():
 				closePage()
-				a.set(YouTubeConnection{State: "error", Error: "YouTube connection interrupted. Try again."})
+				a.set(
+					YouTubeConnection{
+						State: "error",
+						Error: "YouTube connection interrupted. Try again.",
+					},
+				)
 				continue
 			default:
 			}
 			bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
-			raw, err := page.Request(bounded, "Runtime.evaluate", map[string]any{"expression": youtubeAccountJS, "returnByValue": true})
+			raw, err := page.Request(
+				bounded,
+				"Runtime.evaluate",
+				map[string]any{"expression": youtubeAccountJS, "returnByValue": true},
+			)
 			cancel()
 			var result struct {
 				Result struct {
@@ -224,10 +264,16 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 				} `json:"result"`
 			}
 			var p youtubeAccountProbe
-			if err != nil || json.Unmarshal(raw, &result) != nil || json.Unmarshal([]byte(result.Result.Value), &p) != nil {
+			if err != nil || json.Unmarshal(raw, &result) != nil ||
+				json.Unmarshal([]byte(result.Result.Value), &p) != nil {
 				if !failures.alive(now, errors.New("metadata unavailable")) {
 					closePage()
-					a.set(YouTubeConnection{State: "error", Error: "YouTube did not respond. Try again."})
+					a.set(
+						YouTubeConnection{
+							State: "error",
+							Error: "YouTube did not respond. Try again.",
+						},
+					)
 				}
 				continue
 			}
@@ -240,7 +286,12 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 			if linking && until.IsZero() && now.Sub(opened) > 90*time.Second && !p.SignedIn {
 				closePage()
 				linking = false
-				a.set(YouTubeConnection{State: "error", Error: "No activation code received. Try again."})
+				a.set(
+					YouTubeConnection{
+						State: "error",
+						Error: "No activation code received. Try again.",
+					},
+				)
 				continue
 			}
 			s := accountState(p, linking, until, now)
@@ -255,7 +306,10 @@ func (a *YouTubeAccount) Run(ctx context.Context) {
 			}
 			if s.State == "checking" && now.Sub(opened) > 90*time.Second {
 				closePage()
-				s = YouTubeConnection{State: "error", Error: "YouTube did not finish loading. Try again."}
+				s = YouTubeConnection{
+					State: "error",
+					Error: "YouTube did not finish loading. Try again.",
+				}
 			}
 			a.set(s)
 		}

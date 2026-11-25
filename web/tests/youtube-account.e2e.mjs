@@ -40,6 +40,8 @@ try {
  const dialog=page.getByRole("dialog");
  await dialog.getByRole("button",{name:"Cancel",exact:true}).click();
  assert.ok(!writes.includes("disconnect"));
+ state={state:"error",premium:false,error:"Local sign-out could not be completed. Try again."};
+ await card.getByText("Connection failed",{exact:true}).waitFor();
  await card.getByRole("button",{name:"Sign out on this device",exact:true}).click();
  await dialog.getByRole("button",{name:"Sign out",exact:true}).click();
  await card.getByText("Not connected",{exact:true}).waitFor();
@@ -47,16 +49,31 @@ try {
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.close();
+ // First-party labels are localized; none of these may claim authentication.
+ const query=(await readFile(resolve(root,"pkg/media/cast/protocols/webreceiver/youtube-account.go"),"utf8")).match(/const youtubeAccountJS = \`([\s\S]*?)\`/)[1];
+ const accountPage=await browser.newPage();
+ await accountPage.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:"<ytlr-avatar-lockup></ytlr-avatar-lockup><ytlr-logo-entity premium></ytlr-logo-entity>"}));
+ await accountPage.goto("https://www.youtube.com/tv");
+ for(const title of ["Sign in","Anmelden","Accedi","Đăng nhập","Guest","Gast","Ospite","Khách",""]){
+  await accountPage.evaluate(title=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title}},title);
+  const p=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
+  assert.equal(p.signedIn,false,title);assert.equal(p.premium,false,title);
+ }
+ await accountPage.evaluate(()=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title:"Synthetic member"}});
+ const connected=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
+ assert.equal(connected.signedIn,true);assert.equal(connected.premium,true);
+ assert.ok(!JSON.stringify(connected).includes("Synthetic member"));
+ await accountPage.close();
  console.log("PASS YouTube service placement, activation, cancel, expiry/retry, Premium, sign-out confirmation and mobile width");
  // The TV bridge drives a real HTML media element, never external services.
  const bridge=await readFile(resolve(root,"pkg/media/cast/protocols/webreceiver/youtube-tv.js"),"utf8");
  const data=Buffer.alloc(44+8000*12*2);data.write("RIFF");data.writeUInt32LE(data.length-8,4);data.write("WAVEfmt ",8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(8000,24);data.writeUInt32LE(16000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write("data",36);data.writeUInt32LE(data.length-44,40);
  for(const play of [true,false]){
   const p=await browser.newPage();
-  await p.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:'<ytlr-player></ytlr-player><video src="data:audio/wav;base64,'+data.toString("base64")+'"></video><script>document.querySelector("ytlr-player").__instance={J:{isAdActive:false,play(){document.querySelector("video").play()},pause(){document.querySelector("video").pause()}}}</script>'}));
+  await p.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:'<ytlr-player></ytlr-player><video></video><script>document.querySelector("ytlr-player").__instance={J:{isAdActive:false,play(){const v=document.querySelector("video");if(!v.currentSrc)v.src="data:audio/wav;base64,'+data.toString("base64")+'";v.play()},pause(){document.querySelector("video").pause()}}}</script>'}));
   await p.addInitScript(bridge);await p.goto("https://www.youtube.com/tv");
-  await p.waitForFunction(()=>document.querySelector("video").readyState>=2);
   await p.evaluate(play=>youtubeTVLoad("TEST0000000",0,play),play);
+  await p.waitForFunction(()=>document.querySelector("video").readyState>=2);
   if(play)await p.waitForFunction(()=>youtubePlayer.getCurrentTime()>0.3);
   else {await p.waitForTimeout(600);assert.equal(await p.evaluate(()=>document.querySelector("video").paused),true);}
   await p.evaluate(()=>youtubePlayer.pauseVideo());const at=await p.evaluate(()=>youtubePlayer.getCurrentTime());
