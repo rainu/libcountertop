@@ -54,15 +54,17 @@ try {
  const accountPage=await browser.newPage();
  await accountPage.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:"<ytlr-avatar-lockup></ytlr-avatar-lockup><ytlr-logo-entity premium></ytlr-logo-entity>"}));
  await accountPage.goto("https://www.youtube.com/tv");
- for(const title of ["Sign in","Anmelden","Accedi","Đăng nhập","Guest","Gast","Ospite","Khách",""]){
+ for(const title of ["Sign in","Anmelden","Accedi","Đăng nhập","Guest","Gast","Ospite","Khách","",null,17,{runs:[{text:"Anmelden"}]},{simpleText:"Sign in"},{runs:[]},{runs:[{unknown:true}]}]){
   await accountPage.evaluate(title=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title}},title);
   const p=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
   assert.equal(p.signedIn,false,title);assert.equal(p.premium,false,title);
  }
- await accountPage.evaluate(()=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title:"Synthetic member"}});
- const connected=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
- assert.equal(connected.signedIn,true);assert.equal(connected.premium,true);
- assert.ok(!JSON.stringify(connected).includes("Synthetic member"));
+ for(const title of ["Synthetic member",{runs:[{text:"Synthetic "},{text:"member"}]},{simpleText:"Synthetic member"}]){
+  await accountPage.evaluate(title=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title}},title);
+  const connected=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
+  assert.equal(connected.signedIn,true);assert.equal(connected.premium,true);
+  assert.ok(!JSON.stringify(connected).includes("Synthetic"));
+ }
  await accountPage.close();
  console.log("PASS YouTube service placement, activation, cancel, expiry/retry, Premium, sign-out confirmation and mobile width");
  // The TV bridge drives a real HTML media element, never external services.

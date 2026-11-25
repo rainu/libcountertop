@@ -74,8 +74,10 @@ func (a *YouTubeAccount) Command(action string) error {
 const youtubeAccountJS = `JSON.stringify((()=>{
  if(location.hostname!=="www.youtube.com" || !location.pathname.startsWith("/tv")) return {};
  const av=document.querySelector("ytlr-avatar-lockup")?.__instance?.props||{};
- const signIn=/^(sign in|anmelden|accedi|đăng nhập|guest|gast|ospite|khách)$/i.test((av.title||"").trim());
- const signedIn=!!av.title&&!signIn;
+ const title=av.title;
+ const label=typeof title==="string"?title:Array.isArray(title?.runs)?title.runs.map(r=>typeof r?.text==="string"?r.text:"").join(""):typeof title?.simpleText==="string"?title.simpleText:"";
+ const signIn=/^(sign in|anmelden|accedi|đăng nhập|guest|gast|ospite|khách)$/i.test(label.trim());
+ const signedIn=!!label&&!signIn;
  const logo=document.querySelector("ytlr-logo-entity");
  const t=document.body?.innerText||"";
  const m=t.includes("yt.be/activate")?t.match(/\b[A-Z0-9]{3,5}(?:-[A-Z0-9]{3,5}){1,3}\b/):null;
