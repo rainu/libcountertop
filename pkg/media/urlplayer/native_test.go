@@ -179,7 +179,8 @@ func TestNativeFixtureMatrix(t *testing.T) {
 				samples,
 				tr.length,
 			)
-			if tr.picture.Codec != playback.H264 && tr.picture.Codec != playback.RGBA {
+			if tr.picture.Codec != playback.H264 && tr.picture.Codec != playback.HEVC &&
+				tr.picture.Codec != playback.VP9 && tr.picture.Codec != playback.RGBA {
 				t.Fatal("unexpected output")
 			}
 		})
@@ -359,6 +360,66 @@ func TestNativeInterleaving(t *testing.T) {
 			}
 			if samples < 48000 {
 				t.Fatal("incomplete playback")
+			}
+		})
+	}
+}
+
+func TestNativeHardwareProfiles(t *testing.T) {
+	helper, root := os.Getenv("ECHOLOCAL_NATIVE_HELPER"), os.Getenv("ECHOLOCAL_NATIVE_PROFILES")
+	if helper == "" || root == "" {
+		t.Skip("explicit hardware profile fixtures required")
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(root)))
+	defer server.Close()
+	for _, name := range []string{"hevc10.mkv", "vp9-10.webm"} {
+		t.Run(name, func(t *testing.T) {
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, 0)
+			defer tr.close()
+			err := tr.openNative(tr.ctx)
+			if nativeMessage(err) != "Video decoder: UNSUPPORTED_CODEC_PROFILE" {
+				t.Fatalf("unsupported hardware profile admitted: %v", err)
+			}
+		})
+	}
+}
+
+func TestNativeExtendedSeekAndStop(t *testing.T) {
+	helper, root := os.Getenv("ECHOLOCAL_NATIVE_HELPER"), os.Getenv("ECHOLOCAL_NATIVE_FIXTURES")
+	if helper == "" || root == "" {
+		t.Skip("explicit extended fixtures required")
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(root)))
+	defer server.Close()
+	for _, name := range []string{"ogg-theora-vorbis.ogv", "mkv-hevc-dts.mkv", "webm-vp9-opus.webm"} {
+		if _, err := os.Stat(filepath.Join(root, name)); err != nil {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			tr := p.track(
+				cast.Media{ContentID: server.URL + "/" + name}, nil, 1200*time.Millisecond,
+			)
+			defer tr.close()
+			if err := tr.openNative(ctx); err != nil {
+				t.Fatal(err)
+			}
+			d := tr.dec.(*nativeDecoder)
+			_, at, err := tr.picture.Next(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tr.picture.Codec == playback.RGBA && at < 1200*time.Millisecond {
+				t.Fatal("seek emitted software preroll")
+			}
+			tr.close()
+			select {
+			case <-d.done:
+			case <-time.After(2 * time.Second):
+				t.Fatal("helper survived stop")
 			}
 		})
 	}

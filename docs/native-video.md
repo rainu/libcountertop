@@ -69,3 +69,21 @@ Refs rainu/echolocal#79.
 MP4 AAC probes a bounded eight-frame prefix when native fallback is available: an LC ASC may hide implicit HE-AAC/SBR. Probing uses an isolated decoder, then restarts a fresh one for playback. Unsupported profiles discovered later fail explicitly rather than silently skipping all sound. Device interleave tests gate raw-picture consumption on the PCM clock, reproducing MPEG-PS packet-burst deadlocks that unthrottled decode tests miss.
 
 A kept raw surface is reusable only at identical width and height. Hardware decoder size adaptation is unchanged. The regression covers larger, smaller, changed-height and same-area/different-aspect transitions.
+
+
+## Additional optional formats
+
+The ELV1 bridge also accepts encoded HEVC Main 8-bit and VP9 profile 0 pictures,
+using the existing platform surface decoder instead of raw-image conversion.
+Platform selection is not a hardware guarantee: Athena selects the MediaTek
+HEVC decoder but Google software VP9. The application bounds VP9 to 720p30
+and HEVC/H264 to 1080p60. Theora empty packets repeat the last bounded RGBA
+picture at the packet timestamp, including correct preroll handling for seek.
+Unsupported Matroska video with usable builtin audio must select the optional
+native fallback, not silently become audio-only. Screenless/non-native clients
+retain their prior behavior.
+
+Opt-in TestNativeHardwareProfiles rejects HEVC 10-bit and VP9 profile2;
+TestNativeExtendedSeekAndStop covers Theora preroll and platform-codec stop/reap.
+The application owns the expanded fixture generator and actual hardware tests.
+No AV1 or RealMedia support is claimed by this extension.

@@ -274,3 +274,18 @@ func TestInbandParametersOverrideStaleContainerSets(t *testing.T) {
 		}
 	}
 }
+
+func TestUnsupportedMatroskaVideoSelectsNativeInsteadOfSoundOnly(t *testing.T) {
+	body, err := os.ReadFile("testdata/clip.mkv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	unsupported := bytes.Repeat([]byte{'X'}, len(AVC))
+	body = bytes.Replace(body, []byte(AVC), unsupported, 1)
+	tr := New(Options{Screen: true, Native: &Native{Helper: "/nonexistent/optional-video-helper"}}).
+		track(cast.Media{ContentID: serve(t, "video/x-matroska", body, true)}, nil, 0)
+	defer tr.close()
+	if err := tr.ensure(); nativeMessage(err) != "Video decoder: HELPER_UNAVAILABLE" {
+		t.Fatalf("unsupported video silently became audio-only instead of native fallback: %v", err)
+	}
+}

@@ -189,6 +189,11 @@ func (t *track) beginBuiltin(ctx context.Context) error {
 	if m, ok := dec.(*matroska); ok && t.screen {
 		if video, ok := m.demux.Paired(); ok {
 			pic, err := matroskaPicture(video.Codec, video.Private, video.Width, video.Height)
+			if err != nil && t.player.o.Native != nil {
+				// A usable audio decoder must not hide an unsupported video
+				// track from the optional native container/codec fallback.
+				return err
+			}
 			if err == nil {
 				x := startMuxed(
 					ctx,
