@@ -6,6 +6,13 @@
  const advertising=()=>player()?.isAdActive===true;
  let desiredPlay=null;
  window.youtubeStatus={ready:false,state:-1,error:0,site:true};
+ // Only classify readiness locally: never return an account label/identity.
+ window.youtubeTVReady=()=>{
+  if(location.hostname!=="www.youtube.com"||!location.pathname.startsWith("/tv")||document.readyState==="loading")return false;
+  const title=document.querySelector("ytlr-avatar-lockup")?.__instance?.props?.title;
+  const label=typeof title==="string"?title:Array.isArray(title?.runs)?title.runs.map(r=>typeof r?.text==="string"?r.text:"").join(""):typeof title?.simpleText==="string"?title.simpleText:"";
+  return !!label.trim()&&!/^(sign in|anmelden|accedi|đăng nhập|guest|gast|ospite|khách)$/i.test(label.trim());
+ };
  window.youtubeTVLoad=(id,start,play)=>{
   window.__youtubeTVRequest={id,start,play,at:Date.now(),lastRoute:Date.now(),routes:1};
   location.hash="/watch?v="+encodeURIComponent(id);
@@ -24,12 +31,12 @@
   const v=video(),s=window.youtubeStatus,request=window.__youtubeTVRequest;
   if(!request){if(v&&!v.paused)v.pause();return;} // never autoplay TV home recommendations
   s.ready=!!v;
-  if(!v)return;
-  if(!applied&&!v.currentSrc&&Date.now()-request.lastRoute>8000&&request.routes<3){
+  if(!applied&&(!v||!v.currentSrc)&&Date.now()-request.lastRoute>8000&&request.routes<3){
    request.lastRoute=Date.now();request.routes++;
    location.hash="";
    setTimeout(()=>location.hash="/watch?v="+encodeURIComponent(request.id),250);
   }
+  if(!v)return;
   // The TV application must initiate its first load before decoder metadata
   // exists. Waiting for readyState first deadlocks startup on the real device.
   if(!applied&&v.readyState<1&&Date.now()-kicked>2000){

@@ -114,3 +114,69 @@ func TestYouTubeProbeFailuresAreTransientButBounded(t *testing.T) {
 		t.Fatal("recovered playback inherited old failure window")
 	}
 }
+
+func TestYouTubeTVReadinessReadyWithoutPollingDelay(t *testing.T) {
+	calls := 0
+	err := waitYouTubeTVReady(
+		context.Background(),
+		100*time.Millisecond,
+		func(context.Context) (bool, error) {
+			calls++
+			return true, nil
+		},
+	)
+	if err != nil || calls != 1 {
+		t.Fatalf("ready page delayed: calls=%d err=%v", calls, err)
+	}
+}
+func TestYouTubeTVReadinessRetriesInitializationAndTransientErrors(t *testing.T) {
+	for _, transient := range []bool{false, true} {
+		calls := 0
+		err := waitYouTubeTVReady(
+			context.Background(),
+			time.Second,
+			func(context.Context) (bool, error) {
+				calls++
+				if calls == 1 {
+					if transient {
+						return false, errors.New("navigation replaced context")
+					}
+					return false, nil
+				}
+				return true, nil
+			},
+		)
+		if err != nil || calls != 2 {
+			t.Fatalf("did not resume at readiness: calls=%d err=%v", calls, err)
+		}
+	}
+}
+func TestYouTubeTVReadinessTimeoutAndCancellationAreBounded(t *testing.T) {
+	for _, stall := range []bool{false, true} {
+		err := waitYouTubeTVReady(
+			context.Background(),
+			30*time.Millisecond,
+			func(ctx context.Context) (bool, error) {
+				if stall {
+					<-ctx.Done()
+					return false, ctx.Err()
+				}
+				return false, nil
+			},
+		)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("unbounded initialization: %v", err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	calls := 0
+	err := waitYouTubeTVReady(
+		ctx,
+		time.Second,
+		func(context.Context) (bool, error) { calls++; return true, nil },
+	)
+	if !errors.Is(err, context.Canceled) || calls != 0 {
+		t.Fatalf("cancelled load probed: calls=%d err=%v", calls, err)
+	}
+}

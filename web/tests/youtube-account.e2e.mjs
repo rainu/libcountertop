@@ -64,24 +64,29 @@ try {
  await page.close();
  // First-party labels are localized; none of these may claim authentication.
  const query=(await readFile(resolve(root,"pkg/media/cast/protocols/webreceiver/youtube-account.go"),"utf8")).match(/const youtubeAccountJS = \`([\s\S]*?)\`/)[1];
+ const tvBridge=await readFile(resolve(root,"pkg/media/cast/protocols/webreceiver/youtube-tv.js"),"utf8");
  const accountPage=await browser.newPage();
+ await accountPage.addInitScript(tvBridge);
  await accountPage.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:"<ytlr-avatar-lockup></ytlr-avatar-lockup><ytlr-logo-entity premium></ytlr-logo-entity>"}));
  await accountPage.goto("https://www.youtube.com/tv");
  for(const title of ["Sign in","Anmelden","Accedi","Đăng nhập","Guest","Gast","Ospite","Khách","",null,17,{runs:[{text:"Anmelden"}]},{simpleText:"Sign in"},{runs:[]},{runs:[{unknown:true}]}]){
   await accountPage.evaluate(title=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title}},title);
   const p=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
   assert.equal(p.signedIn,false,title);assert.equal(p.premium,false,title);
+  assert.equal(await accountPage.evaluate(()=>youtubeTVReady()),false);
  }
  for(const title of ["Synthetic member",{runs:[{text:"Synthetic "},{text:"member"}]},{simpleText:"Synthetic member"}]){
   await accountPage.evaluate(title=>document.querySelector("ytlr-avatar-lockup").__instance={props:{title}},title);
   const connected=await accountPage.evaluate(script=>JSON.parse((0,eval)(script)),query);
   assert.equal(connected.signedIn,true);assert.equal(connected.premium,true);
+  assert.equal(await accountPage.evaluate(()=>youtubeTVReady()),true);
+  assert.equal(await accountPage.evaluate(()=>!!document.querySelector("video")),false);
   assert.ok(!JSON.stringify(connected).includes("Synthetic"));
  }
  await accountPage.close();
  console.log("PASS YouTube service placement, activation, cancel, expiry/retry, Premium, sign-out confirmation and mobile width");
  // The TV bridge drives a real HTML media element, never external services.
- const bridge=await readFile(resolve(root,"pkg/media/cast/protocols/webreceiver/youtube-tv.js"),"utf8");
+ const bridge=tvBridge;
  const data=Buffer.alloc(44+8000*12*2);data.write("RIFF");data.writeUInt32LE(data.length-8,4);data.write("WAVEfmt ",8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(8000,24);data.writeUInt32LE(16000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write("data",36);data.writeUInt32LE(data.length-44,40);
  for(const play of [true,false]){
   const p=await browser.newPage();

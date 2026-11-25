@@ -95,7 +95,6 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 	defer ticker.Stop()
 	deadline := time.Now().Add(90 * time.Second)
 	tv := false
-	var tvOpened time.Time
 	for {
 		if time.Now().After(deadline) {
 			y.fail(ctx, "The YouTube player did not become ready")
@@ -135,7 +134,6 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 			address := "http://127.0.0.1:" + strconv.Itoa(y.r.o.BusPort) + "/youtube?" + q.Encode()
 			if tv {
 				address = "https://www.youtube.com/tv"
-				tvOpened = time.Now()
 			}
 			err := tools.Navigate(address)
 			y.op.Unlock()
@@ -152,10 +150,31 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		case <-ticker.C:
 		}
 	}
+	if tv {
+		// Readiness is a condition, not a fixed startup delay. Keep the original
+		// overall startup deadline as well as a bounded TV-initialization phase.
+		readyCtx, cancel := context.WithDeadline(ctx, deadline)
+		expr := fmt.Sprintf(
+			"Boolean(window.youtubeTVReady?.() && (youtubeTVLoad(%q,%f,%t),true))",
+			id, at.Seconds(), play,
+		)
+		err := waitYouTubeTVReady(
+			readyCtx,
+			30*time.Second,
+			func(probe context.Context) (bool, error) {
+				ready, err := y.r.Eval(probe, expr)
+				return ready == "true", err
+			},
+		)
+		cancel()
+		if err != nil {
+			y.fail(ctx, "YouTube TV did not become ready. Try again")
+			return
+		}
+	}
 	// A load deadline does not terminate a successfully playing session.
 	loaded := false
 	website := tv
-	tvRouted := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -165,24 +184,6 @@ func (y *YouTube) open(ctx context.Context, id string, at time.Duration, play bo
 		if time.Now().After(deadline) {
 			y.fail(ctx, "YouTube did not start. The video may be unavailable or blocked")
 			return
-		}
-		if tv && !tvRouted {
-			if time.Since(tvOpened) < 12*time.Second {
-				continue
-			}
-			bounded, done := context.WithTimeout(ctx, 3*time.Second)
-			expr := fmt.Sprintf(
-				"Boolean(location.pathname.startsWith('/tv') && document.querySelector('ytlr-avatar-lockup')?.__instance?.props?.title && window.youtubeTVLoad && (youtubeTVLoad(%q,%f,%t),true))",
-				id,
-				at.Seconds(),
-				play,
-			)
-			ready, e := y.r.Eval(bounded, expr)
-			done()
-			if e != nil || ready != "true" {
-				continue
-			}
-			tvRouted = true
 		}
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		raw, err := y.r.Eval(
@@ -452,4 +453,36 @@ func (h *youtubeProbeHealth) alive(now time.Time, err error) bool {
 		h.failedAt = now
 	}
 	return now.Sub(h.failedAt) < 15*time.Second
+}
+
+// waitYouTubeTVReady probes immediately and retries only while initialization
+// remains incomplete. The caller's cancellation and deadline always win.
+func waitYouTubeTVReady(
+	ctx context.Context,
+	timeout time.Duration,
+	probe func(context.Context) (bool, error),
+) error {
+	bounded, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	tick := time.NewTicker(250 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if err := bounded.Err(); err != nil {
+			return err
+		}
+		attempt, done := context.WithTimeout(bounded, 3*time.Second)
+		ready, err := probe(attempt)
+		done()
+		if err := bounded.Err(); err != nil {
+			return err
+		}
+		if err == nil && ready {
+			return nil
+		}
+		select {
+		case <-bounded.Done():
+			return bounded.Err()
+		case <-tick.C:
+		}
+	}
 }
