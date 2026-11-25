@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ygelfand/libcountertop/pkg/fetch"
+	"github.com/ygelfand/libcountertop/pkg/media/smburl"
 )
 
 const (
@@ -38,7 +39,17 @@ func open(ctx context.Context, client *http.Client, url string, from int64) (str
 	case http.StatusPartialContent:
 		resp.Body.Close()
 		size := total(resp.Header.Get("Content-Range"))
-		r := fetch.NewRanged(ctx, client, url, size, fetch.Chunks{Size: chunk, Ahead: ahead})
+		// SMB range requests include signed session setup. MOV demuxers may
+		// alternate small reads between distant audio/video chunks; retain a
+		// bounded 8 MiB working set rather than reconnecting for every packet.
+		cache := 0
+		if req.URL.Hostname() == smburl.Host {
+			cache = 32
+		}
+		r := fetch.NewRanged(
+			ctx, client, url, size,
+			fetch.Chunks{Size: chunk, Ahead: ahead, Cache: cache},
+		)
 		if from > 0 {
 			r.From(from)
 		}

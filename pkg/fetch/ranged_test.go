@@ -223,3 +223,66 @@ func TestARefusedChunkPartWayIsTriedAgain(t *testing.T) {
 		t.Errorf("the refused chunk was asked for %d times, want 3", n)
 	}
 }
+
+func TestCachedRangesSurviveUnalignedDistantSeeks(t *testing.T) {
+	body := content(4000)
+	var required atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if span := req.Header.Get("Range"); span == "bytes=0-99" || span == "bytes=3000-3099" {
+			required.Add(1)
+		}
+		http.ServeContent(w, req, "", time.Time{}, bytes.NewReader(body))
+	}))
+	defer server.Close()
+	url := server.URL
+	r := NewRanged(
+		t.Context(), http.DefaultClient, url, int64(len(body)),
+		Chunks{Size: 100, Ahead: 1, Cache: 8},
+	)
+	defer r.Close()
+	for round := 0; round < 12; round++ {
+		for _, at := range []int64{37, 3037, 43, 3043} {
+			r.From(at)
+			got := make([]byte, 20)
+			if _, err := io.ReadFull(r, got); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, body[at:at+20]) {
+				t.Fatalf("wrong bytes after seek to %d", at)
+			}
+		}
+	}
+	if got := required.Load(); got > 3 {
+		t.Fatalf("cached two-track data was refetched %d times", got)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.cache) > 8 {
+		t.Fatal("cache exceeded its bound")
+	}
+}
+
+func TestCachedRangesRespectEOFAndEvict(t *testing.T) {
+	body := content(1099)
+	url, _ := served(t, body)
+	r := NewRanged(
+		t.Context(), http.DefaultClient, url, int64(len(body)),
+		Chunks{Size: 100, Ahead: 1, Cache: 2},
+	)
+	defer r.Close()
+	for _, at := range []int64{1073, 33, 519, 1073, 0} {
+		r.From(at)
+		got, err := io.ReadAll(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(got, body[at:]) {
+			t.Fatal("cached EOF/eviction corrupted bytes")
+		}
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.cache) > 2 {
+		t.Fatal("eviction failed")
+	}
+}

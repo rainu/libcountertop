@@ -43,6 +43,8 @@ func placement(
 
 func codecOf(fourcc uint32) (uint32, error) {
 	switch fourcc {
+	case playback.RGBA:
+		return surface.RGBA, nil
 	case playback.VP9:
 		return surface.VP9, nil
 	case playback.H264:
@@ -189,7 +191,11 @@ func (pl Player) On(
 		}
 	}()
 
-	frames := make(chan videostream.Frame, buffered)
+	capacity := buffered
+	if s.Codec == playback.RGBA {
+		capacity = 3
+	}
+	frames := make(chan videostream.Frame, capacity)
 	failed := make(chan error, 1)
 	workers.Add(1)
 	go func() {

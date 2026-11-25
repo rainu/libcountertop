@@ -3,11 +3,15 @@ package urlplayer
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"github.com/ygelfand/libcountertop/pkg/media/playback"
@@ -225,5 +229,63 @@ func TestHEVCConfigRejectsCutShortAndNonMainRecords(t *testing.T) {
 func TestAVCConfigRejectsARecordCutShort(t *testing.T) {
 	if _, err := parseAVCConfig([]byte{1, 0x42, 0, 0x1e, 0xff, 0xe1, 0, 9, 0x67}); err == nil {
 		t.Fatal("parsed an avcC record whose SPS runs past its end")
+	}
+}
+
+func TestInbandParametersOverrideStaleContainerSets(t *testing.T) {
+	for _, codec := range []uint32{playback.H264, playback.HEVC} {
+		sps, pps, idr := byte(0x67), byte(0x68), byte(0x65)
+		if codec == playback.HEVC {
+			sps, pps, idr = 33<<1, 34<<1, 19<<1
+		}
+		oldSPS, oldPPS := []byte{sps, 77}, []byte{pps, 1}
+		newSPS, newPPS := []byte{sps, 66}, []byte{pps, 2}
+		for _, tc := range []struct {
+			name     string
+			in, want [][]byte
+		}{
+			{"both in band", [][]byte{newSPS, newPPS, {idr, 9}}, [][]byte{newSPS, newPPS, {idr, 9}}},
+			{"missing PPS", [][]byte{newSPS, {idr, 9}}, [][]byte{oldPPS, newSPS, {idr, 9}}},
+			{"container only", [][]byte{{idr, 9}}, [][]byte{oldSPS, oldPPS, {idr, 9}}},
+		} {
+			t.Run(fmt.Sprint(codec)+tc.name, func(t *testing.T) {
+				c := nalConfig{codec: codec, lengthSize: 4, params: [][]byte{oldSPS, oldPPS}}
+				p := newPicture(16, 16, c)
+				var data bytes.Buffer
+				for _, u := range tc.in {
+					if err := binary.Write(&data, binary.BigEndian, uint32(len(u))); err != nil {
+						t.Fatal(err)
+					}
+					data.Write(u)
+				}
+				p.push(t.Context(), sample{key: true, data: data.Bytes()})
+				got, _, err := p.next(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+				want, err := h264.AnnexB(tc.want).Marshal()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(got, want) {
+					t.Fatal("stale or missing parameter sets in decoder access unit")
+				}
+			})
+		}
+	}
+}
+
+func TestUnsupportedMatroskaVideoSelectsNativeInsteadOfSoundOnly(t *testing.T) {
+	body, err := os.ReadFile("testdata/clip.mkv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	unsupported := bytes.Repeat([]byte{'X'}, len(AVC))
+	body = bytes.Replace(body, []byte(AVC), unsupported, 1)
+	tr := New(Options{Screen: true, Native: &Native{Helper: "/nonexistent/optional-video-helper"}}).
+		track(cast.Media{ContentID: serve(t, "video/x-matroska", body, true)}, nil, 0)
+	defer tr.close()
+	if err := tr.ensure(); nativeMessage(err) != "Video decoder: HELPER_UNAVAILABLE" {
+		t.Fatalf("unsupported video silently became audio-only instead of native fallback: %v", err)
 	}
 }

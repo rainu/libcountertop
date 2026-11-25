@@ -25,13 +25,22 @@ type Ranged struct {
 	lead   time.Duration
 	retry  time.Duration
 
-	mu     sync.Mutex
-	cancel context.CancelFunc
-	chunks chan piece
-	cur    []byte
-	pos    int64
-	size   int64
-	closed bool
+	mu         sync.Mutex
+	cancel     context.CancelFunc
+	chunks     chan piece
+	cur        []byte
+	pos        int64
+	size       int64
+	closed     bool
+	cacheLimit int
+	cacheTick  uint64
+	cache      map[int64]cachedPiece
+}
+
+type cachedPiece struct {
+	data  []byte
+	total int64
+	used  uint64
 }
 
 type piece struct {
@@ -42,6 +51,8 @@ type piece struct {
 type Ask func(req *http.Request)
 
 type Chunks struct {
+	// Cache retains this many aligned immutable chunks across seeks (0 disables, max 64).
+	Cache int
 	Size  int64
 	Ahead int
 
@@ -64,6 +75,10 @@ func NewRanged(ctx context.Context, client *http.Client, url string, size int64,
 		client: client, url: url, chunk: c.Size, ahead: c.Ahead, parent: ctx, size: size,
 		ask: c.Ask, renew: c.Renew, rate: c.Rate, lead: c.Lead, retry: c.Retry,
 	}
+	r.cacheLimit = min(max(c.Cache, 0), 64)
+	if r.cacheLimit > 0 {
+		r.cache = make(map[int64]cachedPiece)
+	}
 	r.start(0)
 	return r
 }
@@ -84,6 +99,10 @@ func (r *Ranged) start(from int64) {
 func (r *Ranged) fetch(ctx context.Context, out chan<- piece, from int64) {
 	defer close(out)
 	began := time.Now()
+	first := from
+	if r.cacheLimit > 0 {
+		from -= from % r.chunk
+	}
 	for off := from; ; off += r.chunk {
 		r.mu.Lock()
 		size := r.size
@@ -96,6 +115,10 @@ func (r *Ranged) fetch(ctx context.Context, out chan<- piece, from int64) {
 		}
 
 		data, total, err := r.get(ctx, off, off > from)
+		fetched := len(data)
+		if off < first {
+			data = data[min(int64(len(data)), first-off):]
+		}
 		if total > 0 {
 			r.mu.Lock()
 			r.size = total
@@ -106,7 +129,7 @@ func (r *Ranged) fetch(ctx context.Context, out chan<- piece, from int64) {
 		case <-ctx.Done():
 			return
 		}
-		if err != nil || int64(len(data)) < r.chunk {
+		if err != nil || int64(fetched) < r.chunk {
 			return
 		}
 	}
@@ -159,7 +182,17 @@ func (r *Ranged) get(ctx context.Context, off int64, later bool) ([]byte, int64,
 var errRefused = errors.New("fetch: refused")
 
 func (r *Ranged) once(ctx context.Context, off int64) ([]byte, int64, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
 	r.mu.Lock()
+	if cached, ok := r.cache[off]; ok {
+		r.cacheTick++
+		cached.used = r.cacheTick
+		r.cache[off] = cached
+		r.mu.Unlock()
+		return cached.data, cached.total, nil
+	}
 	url := r.url
 	r.mu.Unlock()
 
@@ -236,7 +269,26 @@ func (r *Ranged) once(ctx context.Context, off int64) ([]byte, int64, error) {
 	data, err := io.ReadAll(io.LimitReader(resp.Body, r.chunk))
 	slog.Debug("fetch", "range", span, "size", r.chunk, "status", resp.Status, "got", len(data),
 		"content-range", resp.Header.Get("Content-Range"), "took", time.Since(began), "err", err)
-	return data, total(resp.Header.Get("Content-Range")), err
+	size := total(resp.Header.Get("Content-Range"))
+	if err == nil && len(data) > 0 && r.cacheLimit > 0 {
+		r.mu.Lock()
+		if !r.closed {
+			if _, exists := r.cache[off]; !exists && len(r.cache) >= r.cacheLimit {
+				var oldest int64
+				used := ^uint64(0)
+				for at, entry := range r.cache {
+					if entry.used < used {
+						oldest, used = at, entry.used
+					}
+				}
+				delete(r.cache, oldest)
+			}
+			r.cacheTick++
+			r.cache[off] = cachedPiece{data: data, total: size, used: r.cacheTick}
+		}
+		r.mu.Unlock()
+	}
+	return data, size, err
 }
 
 func total(h string) int64 {
@@ -324,6 +376,8 @@ func (r *Ranged) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.closed = true
+	r.cache = nil
+	r.cur = nil
 	r.cancel()
 	return nil
 }

@@ -76,6 +76,7 @@ func (t *track) ensureLocked() error {
 		t.knownLength.Store(int64(t.length))
 		t.snapshot.Store(&trackSnapshot{
 			failed:   t.failed != nil,
+			message:  nativeMessage(t.failed),
 			width:    int(t.picture.Width),
 			height:   int(t.picture.Height),
 			duration: t.length,
@@ -127,6 +128,23 @@ func (t *track) Read(ctx context.Context, pcm []int16) (int, error) {
 }
 
 func (t *track) begin(ctx context.Context) error {
+	err := t.beginBuiltin(ctx)
+	if err == nil || t.feed != nil || t.player.o.Native == nil || t.player.o.Native.Helper == "" ||
+		ctx.Err() != nil {
+		return err
+	}
+	t.bodyMu.Lock()
+	body := t.body
+	t.bodyMu.Unlock()
+	if body != nil {
+		body.Close()
+	}
+	t.picture = playback.Picture{}
+	t.drop = 0
+	return t.openNative(ctx)
+}
+
+func (t *track) beginBuiltin(ctx context.Context) error {
 	if t.feed != nil {
 		return t.openFeed(ctx)
 	}
@@ -171,6 +189,11 @@ func (t *track) begin(ctx context.Context) error {
 	if m, ok := dec.(*matroska); ok && t.screen {
 		if video, ok := m.demux.Paired(); ok {
 			pic, err := matroskaPicture(video.Codec, video.Private, video.Width, video.Height)
+			if err != nil && t.player.o.Native != nil {
+				// A usable audio decoder must not hide an unsupported video
+				// track from the optional native container/codec fallback.
+				return err
+			}
 			if err == nil {
 				x := startMuxed(
 					ctx,
@@ -459,6 +482,7 @@ func (t *track) Fail(err error) {
 	t.player.mu.Lock()
 	if t.player.cur == t {
 		t.player.failed = true
+		t.player.failure = nativeMessage(err)
 	}
 	t.player.mu.Unlock()
 	if !t.player.stop(t, t.player.o.Output.Stop) {

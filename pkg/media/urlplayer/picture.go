@@ -13,6 +13,7 @@ import (
 
 	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h265"
+	aacpcm "github.com/tphakala/go-aac/pcm"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cenc"
 	"github.com/ygelfand/libcountertop/pkg/media/playback"
@@ -217,6 +218,29 @@ func (p *picture) playback() playback.Picture {
 	return playback.Picture{Codec: p.config.codec, Width: p.width, Height: p.height, Next: p.next}
 }
 
+// In-band parameter sets are authoritative for this access unit. Inserting a
+// stale avcC/hvcC set ahead of them can make MediaCodec configure the wrong
+// profile before it sees the actual stream's SPS. FFmpeg's Annex-B filter follows
+// the same rule; still supply container sets when the access unit omits them.
+func (c nalConfig) missingParams(au [][]byte) [][]byte {
+	kind := func(b []byte) byte {
+		if len(b) == 0 {
+			return 255
+		}
+		if c.codec == playback.HEVC {
+			return b[0] >> 1 & 63
+		}
+		return b[0] & 31
+	}
+	var missing [][]byte
+	for _, param := range c.params {
+		if !slices.ContainsFunc(au, func(u []byte) bool { return kind(u) == kind(param) }) {
+			missing = append(missing, param)
+		}
+	}
+	return missing
+}
+
 func (p *picture) push(ctx context.Context, s sample) {
 	if !p.keyed && !s.key {
 		return
@@ -230,7 +254,7 @@ func (p *picture) push(ctx context.Context, s sample) {
 		return
 	}
 	if s.key {
-		au = slices.Concat(c.params, au)
+		au = slices.Concat(c.missingParams(au), au)
 	}
 	data, err := h264.AnnexB(au).Marshal()
 	if err != nil {
@@ -337,6 +361,9 @@ func (x *muxed) next() ([]int16, error) {
 		out, err := x.frame(s.data)
 		if err == nil {
 			return out, nil
+		}
+		if errors.Is(err, aacpcm.ErrUnsupported) {
+			return nil, nativeFailure("UNSUPPORTED_CODEC_PROFILE")
 		}
 		x.failures++
 		if x.failures == 1 || x.failures%500 == 0 {

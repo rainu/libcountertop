@@ -111,6 +111,7 @@ const (
 	AVC  = 2
 	HEVC = 3
 	VP8  = 4
+	RGBA = 5
 )
 
 const (

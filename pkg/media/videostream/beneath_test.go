@@ -33,3 +33,19 @@ func TestAKeptDecoderServesAnySizeOfTheSameCodecAndSession(t *testing.T) {
 		t.Error("another helper reused the kept decoder")
 	}
 }
+
+func TestAKeptRawSurfaceRequiresIdenticalDimensions(t *testing.T) {
+	c := &surface.Client{}
+	var b Beneath
+	kept := Spec{Codec: surface.RGBA, W: 480, H: 270}
+	b.Adopt(c, 7, kept)
+	if id, spec, ok := b.Reuse(c, kept); !ok || id != 7 || spec != kept {
+		t.Fatal("same-size raw surface was not reusable")
+	}
+	for _, size := range [][2]int{{640, 480}, {320, 240}, {112, 80}, {270, 480}, {480, 360}} {
+		want := Spec{Codec: surface.RGBA, W: size[0], H: size[1]}
+		if _, _, ok := b.Reuse(c, want); ok {
+			t.Fatalf("raw surface reused old geometry for %dx%d", size[0], size[1])
+		}
+	}
+}
