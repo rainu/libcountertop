@@ -72,7 +72,7 @@ try {
  const data=Buffer.alloc(44+8000*12*2);data.write("RIFF");data.writeUInt32LE(data.length-8,4);data.write("WAVEfmt ",8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(8000,24);data.writeUInt32LE(16000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write("data",36);data.writeUInt32LE(data.length-44,40);
  for(const play of [true,false]){
   const p=await browser.newPage();
-  await p.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:'<ytlr-player></ytlr-player><video></video><script>document.querySelector("ytlr-player").__instance={J:{isAdActive:false,play(){const v=document.querySelector("video");if(!v.currentSrc)v.src="data:audio/wav;base64,'+data.toString("base64")+'";v.play()},pause(){document.querySelector("video").pause()}}}</script>'}));
+  await p.route("https://www.youtube.com/tv",r=>r.fulfill({contentType:"text/html",body:'<ytlr-player></ytlr-player><video></video><script>document.querySelector("ytlr-player").__instance={J:{isAdActive:false,play(){const v=document.querySelector("video");if(!v.currentSrc)v.src="data:audio/wav;base64,'+data.toString("base64")+'";v.play().catch(()=>{})},pause(){document.querySelector("video").pause()}}};document.querySelector("video").addEventListener("seeking",()=>document.querySelector("video").play().catch(()=>{}));</script>'}));
   await p.addInitScript(bridge);await p.goto("https://www.youtube.com/tv");
   await p.evaluate(play=>youtubeTVLoad("TEST0000000",0,play),play);
   await p.waitForFunction(()=>document.querySelector("video").readyState>=2);
@@ -81,6 +81,7 @@ try {
   await p.evaluate(()=>youtubePlayer.pauseVideo());const at=await p.evaluate(()=>youtubePlayer.getCurrentTime());
   await p.waitForTimeout(350);assert.equal(await p.evaluate(()=>youtubePlayer.getCurrentTime()),at);
   await p.evaluate(()=>youtubePlayer.seekTo(7));await p.waitForFunction(()=>Math.abs(youtubePlayer.getCurrentTime()-7)<0.1);
+  await p.waitForTimeout(500);assert.equal(await p.evaluate(()=>document.querySelector("video").paused),true);assert.ok(Math.abs(await p.evaluate(()=>youtubePlayer.getCurrentTime())-7)<0.1);
   await p.evaluate(()=>document.querySelector("ytlr-player").__instance.J.isAdActive=true);
   assert.equal(await p.evaluate(()=>youtubePlayer.getDuration()),0);
   await p.evaluate(()=>youtubePlayer.seekTo(9));assert.ok(Math.abs(await p.evaluate(()=>youtubePlayer.getCurrentTime())-7)<0.1);
