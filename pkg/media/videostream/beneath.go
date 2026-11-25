@@ -46,6 +46,10 @@ func (b *Beneath) Reuse(c *surface.Client, s Spec) (uint32, Spec, bool) {
 	if b.c != c || b.kept == 0 || b.spec.Codec != s.Codec || b.spec.Session != s.Session {
 		return 0, Spec{}, false
 	}
+	// MediaCodec can adapt its coded dimensions. A raw pixel window cannot.
+	if b.spec.Codec == surface.RGBA && (b.spec.W != s.W || b.spec.H != s.H) {
+		return 0, Spec{}, false
+	}
 	return b.kept, b.spec, true
 }
 

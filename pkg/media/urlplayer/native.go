@@ -349,7 +349,7 @@ func (t *track) openNative(ctx context.Context) error {
 		return nativeFailure("HELPER_UNAVAILABLE")
 	}
 	if !t.hold(d) {
-		d.Close()
+		_ = d.Close()
 		return io.ErrClosedPipe
 	}
 	seekable := "0"
@@ -366,18 +366,18 @@ func (t *track) openNative(ctx context.Context) error {
 	d.cmd.ExtraFiles = []*os.File{reqW, respR}
 	stdout, err := d.cmd.StdoutPipe()
 	if err != nil {
-		d.Close()
+		_ = d.Close()
 		return nativeFailure("HELPER_UNAVAILABLE")
 	}
 	if err = d.cmd.Start(); err != nil {
-		d.Close()
+		_ = d.Close()
 		return nativeFailure("HELPER_UNAVAILABLE")
 	}
 	reqW.Close()
 	respR.Close()
 	go serveNative(processCtx, s, reqR, respW)
 	timedOut := atomic.Bool{}
-	timer := time.AfterFunc(30*time.Second, func() { timedOut.Store(true); d.Close() })
+	timer := time.AfterFunc(30*time.Second, func() { timedOut.Store(true); _ = d.Close() })
 	meta, err := readNative(stdout)
 	timer.Stop()
 	if err == nil && meta.kind == 4 {
@@ -390,7 +390,7 @@ func (t *track) openNative(ctx context.Context) error {
 		err = nativeFailure("HELPER_PROTOCOL")
 	}
 	if err != nil {
-		d.Close()
+		_ = d.Close()
 		_ = d.cmd.Wait()
 		if nativeMessage(err) == "" {
 			err = nativeFailure("HELPER_FAILED")
@@ -409,7 +409,7 @@ func (t *track) openNative(ctx context.Context) error {
 		(codec == playback.RGBA && (w > 854 || h > 480)) ||
 		length < 0 ||
 		length > int64(30*24*time.Hour/time.Microsecond) {
-		d.Close()
+		_ = d.Close()
 		_ = d.cmd.Wait()
 		return nativeFailure("HELPER_PROTOCOL")
 	}

@@ -129,7 +129,8 @@ func (t *track) Read(ctx context.Context, pcm []int16) (int, error) {
 
 func (t *track) begin(ctx context.Context) error {
 	err := t.beginBuiltin(ctx)
-	if err == nil || t.feed != nil || t.player.o.Native == nil || t.player.o.Native.Helper == "" || ctx.Err() != nil {
+	if err == nil || t.feed != nil || t.player.o.Native == nil || t.player.o.Native.Helper == "" ||
+		ctx.Err() != nil {
 		return err
 	}
 	t.bodyMu.Lock()
