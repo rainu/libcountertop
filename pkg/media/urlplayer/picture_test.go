@@ -3,7 +3,10 @@ package urlplayer
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
+	"fmt"
+	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 	"net/http"
 	"os"
 	"testing"
@@ -225,5 +228,46 @@ func TestHEVCConfigRejectsCutShortAndNonMainRecords(t *testing.T) {
 func TestAVCConfigRejectsARecordCutShort(t *testing.T) {
 	if _, err := parseAVCConfig([]byte{1, 0x42, 0, 0x1e, 0xff, 0xe1, 0, 9, 0x67}); err == nil {
 		t.Fatal("parsed an avcC record whose SPS runs past its end")
+	}
+}
+
+func TestInbandParametersOverrideStaleContainerSets(t *testing.T) {
+	for _, codec := range []uint32{playback.H264, playback.HEVC} {
+		sps, pps, idr := byte(0x67), byte(0x68), byte(0x65)
+		if codec == playback.HEVC {
+			sps, pps, idr = 33<<1, 34<<1, 19<<1
+		}
+		oldSPS, oldPPS := []byte{sps, 77}, []byte{pps, 1}
+		newSPS, newPPS := []byte{sps, 66}, []byte{pps, 2}
+		for _, tc := range []struct {
+			name     string
+			in, want [][]byte
+		}{
+			{"both in band", [][]byte{newSPS, newPPS, {idr, 9}}, [][]byte{newSPS, newPPS, {idr, 9}}},
+			{"missing PPS", [][]byte{newSPS, {idr, 9}}, [][]byte{oldPPS, newSPS, {idr, 9}}},
+			{"container only", [][]byte{{idr, 9}}, [][]byte{oldSPS, oldPPS, {idr, 9}}},
+		} {
+			t.Run(fmt.Sprint(codec)+tc.name, func(t *testing.T) {
+				c := nalConfig{codec: codec, lengthSize: 4, params: [][]byte{oldSPS, oldPPS}}
+				p := newPicture(16, 16, c)
+				var data bytes.Buffer
+				for _, u := range tc.in {
+					binary.Write(&data, binary.BigEndian, uint32(len(u)))
+					data.Write(u)
+				}
+				p.push(t.Context(), sample{key: true, data: data.Bytes()})
+				got, _, err := p.next(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+				want, err := h264.AnnexB(tc.want).Marshal()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(got, want) {
+					t.Fatal("stale or missing parameter sets in decoder access unit")
+				}
+			})
+		}
 	}
 }
