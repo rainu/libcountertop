@@ -87,3 +87,5 @@ Opt-in TestNativeHardwareProfiles rejects HEVC 10-bit and VP9 profile2;
 TestNativeExtendedSeekAndStop covers Theora preroll and platform-codec stop/reap.
 The application owns the expanded fixture generator and actual hardware tests.
 No AV1 or RealMedia support is claimed by this extension.
+
+TestNativeSmallAudioStartup withholds PCM consumption during a bounded six-picture startup lookahead. QuickTime IMA4 must not fill the audio queue before asynchronous first-presentation reporting starts the audio pump. The application helper coalesces tiny audio frames into bounded 20ms records, preserves timestamp discontinuities and flushes partial records at EOF.

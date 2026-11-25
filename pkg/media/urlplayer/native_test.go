@@ -424,3 +424,56 @@ func TestNativeExtendedSeekAndStop(t *testing.T) {
 		})
 	}
 }
+
+func TestNativeSmallAudioStartup(t *testing.T) {
+	helper, root := os.Getenv("ECHOLOCAL_NATIVE_HELPER"), os.Getenv("ECHOLOCAL_NATIVE_FIXTURES")
+	if helper == "" || root == "" {
+		t.Skip("explicit native fixtures required")
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(root)))
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+	tr := p.track(cast.Media{ContentID: server.URL + "/mov-svq1-ima4.mov"}, nil, 0)
+	defer tr.close()
+	if err := tr.openNative(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// The asynchronous display can request several pictures before reporting its
+	// first presentation and starting the audio pump. Tiny IMA4 blocks must not
+	// exhaust the bounded audio queue before this 200ms startup lookahead.
+	for i := range 6 {
+		_, at, err := tr.picture.Next(ctx)
+		if err != nil {
+			t.Fatal("startup interleave deadlock:", err)
+		}
+		t.Logf("picture %d at %v", i, at)
+	}
+	var samples int
+	done := make(chan error, 1)
+	go func() {
+		for {
+			if _, _, err := tr.picture.Next(ctx); err != nil {
+				done <- err
+				return
+			}
+		}
+	}()
+	for {
+		pcm, err := tr.dec.next()
+		samples += len(pcm) / 2
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := <-done; !errors.Is(err, io.EOF) {
+		t.Fatal(err)
+	}
+	if samples < 48000 {
+		t.Fatal("incomplete audio")
+	}
+}
