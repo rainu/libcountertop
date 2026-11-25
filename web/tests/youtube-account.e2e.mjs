@@ -31,6 +31,7 @@ try {
  await qr.waitFor();
  for(const viewport of [{width:1100,height:950},{width:390,height:844}]){
   await page.setViewportSize(viewport);
+  await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth);
   const lb=await link.boundingBox(),qb=await qr.boundingBox();
   assert.ok(qb.x>=lb.x+lb.width,"QR stays right of the activation URL");
   assert.equal(qb.width,144);
