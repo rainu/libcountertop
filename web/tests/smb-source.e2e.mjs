@@ -13,12 +13,17 @@ try{
   const page=await browser.newPage({viewport:{width:1100,height:1000}});
   const errors=[];page.on("pageerror",e=>errors.push(e.message));
   let value={enabled:false,host:"",port:445,share:"",username:"",domain:"",password_set:false,labels:labels[lang]};
-  const writes=[];
+  const writes=[],probes=[];
+  let probeOK=true;
   await page.route("**/api/v1/**",async route=>{
    const req=route.request(),p=new URL(req.url()).pathname;
    let data={};
    if(p.endsWith("/device"))data={name:"SMB fixture",pages:["video","smb"],screen:true,wifi:false};
    else if(p.endsWith("/settings")||p.endsWith("/entities"))data=[];
+   else if(p.endsWith("/smb/test")){
+    probes.push(req.postDataJSON());
+    await route.fulfill({json:{ok:probeOK,code:probeOK?"test_ok":"test_auth",message:labels[lang][probeOK?"test_ok":"test_auth"]}});return;
+   }
    else if(p.endsWith("/smb/")){
     if(req.method()==="PUT"){
      const v=req.postDataJSON();writes.push(v);
@@ -38,11 +43,27 @@ try{
   await box.getByLabel(l.share,{exact:true}).fill("videos");
   await box.getByLabel(l.username,{exact:true}).fill("reader");
   await box.getByLabel(l.password,{exact:true}).fill("synthetic-secret");
+  await box.getByRole("button",{name:l.test,exact:true}).click();
+  await box.getByText(l.test_ok,{exact:true}).waitFor();
+  assert.equal(probes.at(-1).enabled,false);
+  assert.equal(probes.at(-1).password,"synthetic-secret");
+  assert.equal(writes.length,0,"testing an unsaved draft must not save");
+  assert.equal(await box.getByLabel(l.password,{exact:true}).inputValue(),"synthetic-secret");
+  probeOK=false;
+  await box.getByRole("button",{name:l.test,exact:true}).click();
+  await box.getByText(l.test_auth,{exact:true}).waitFor();
+  assert.equal(writes.length,0);
+  probeOK=true;
   await box.getByLabel(l.enabled,{exact:true}).check();
+  assert.equal(await box.getByText(l.test_auth,{exact:true}).count(),0,"editing invalidates the result");
   await box.getByRole("button",{name:l.save,exact:true}).click();
   await box.getByText(l.saved,{exact:true}).waitFor();
   assert.equal(writes.at(-1).password,"synthetic-secret");
   assert.equal(await box.getByLabel(l.password,{exact:true}).inputValue(),"");
+  await box.getByRole("button",{name:l.test,exact:true}).click();
+  await box.getByText(l.test_ok,{exact:true}).waitFor();
+  assert.equal("password" in probes.at(-1),false,"blank test input uses saved credentials");
+  assert.equal(writes.length,1);
   await box.getByRole("button",{name:l.save,exact:true}).click();
   await page.waitForTimeout(150);
   assert.equal("password" in writes.at(-1),false);

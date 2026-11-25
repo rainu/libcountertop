@@ -154,6 +154,7 @@ function post(path: string, body: unknown = {}) {
 export const api = {
  smb: () => call<SMBView>("/smb/"),
  smbSave: (value:SMBSettings & {password?:string;clear_password?:boolean}) => call<object>("/smb/", {...json(value),method:"PUT"}),
+ smbTest: (value:SMBSettings & {password?:string}) => call<{ok:boolean;code:string;message:string}>("/smb/test",json(value)),
  youtube: () => call<YouTubeConnection>("/youtube/"),
  youtubeCommand: (action: "connect" | "refresh" | "cancel" | "disconnect") => call<object>("/youtube/", json({ action })),
  video: () => call<VideoState>("/video/"),
