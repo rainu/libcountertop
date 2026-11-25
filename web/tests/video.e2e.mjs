@@ -17,7 +17,8 @@ try {
   let data={};
   if(path.endsWith("/device"))data={name:"Video test",pages:["video"],screen:true,wifi:false};
   else if(path.endsWith("/settings")||path.endsWith("/entities"))data=[];
-  else if(path.endsWith("/video/")){
+  else if(path.endsWith("/smb/"))data={enabled:false,host:"",port:445,share:"",username:"",domain:"",password_set:false,labels:{}};
+else if(path.endsWith("/video/")){
    if(request.method()==="POST"){
     const cmd=request.postDataJSON();writes.push(cmd);
     if(cmd.action==="load")state={...state,state:"playing",seekable:true};
@@ -53,7 +54,9 @@ try {
  await page.getByRole("button",{name:"Stop",exact:true}).click();
 
  await page.setViewportSize({width:390,height:844});
- assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:resolve(import.meta.dirname,"../../video-mobile.png")});
  assert.deepEqual(errors,[]);
  console.log("PASS: video navigation, direct/YouTube/Music URL load, pause/resume, seek, stop, actionable errors, mobile layout");

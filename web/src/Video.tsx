@@ -31,7 +31,7 @@ export function Video() {
      <Button type="submit" loading={busy} disabled={!url.trim()}>Play on device</Button>
     </Stack>
    </form>
-   <Text size="sm" c="dimmed">Paste a YouTube or YouTube Music link to a video, song, podcast episode, Short or live stream, or a direct MP4 (H.264/AAC). YouTube uses its official player: manage your account under Connected services → YouTube. Eligible Premium benefits use the connected account; otherwise ads may play. Restricted content and playlists are not guaranteed. The device must be able to reach the URL.</Text>
+   <Text size="sm" c="dimmed">Paste a YouTube or YouTube Music link to a video, song, podcast episode, Short or live stream, or a direct MP4 (H.264/AAC). Configure SMB under Connected services → SMB, then use smb://media/folder/video.mp4. YouTube uses its official player: manage your account under Connected services → YouTube. Eligible Premium benefits use the connected account; otherwise ads may play. Restricted content and playlists are not guaranteed. The device must be able to reach the URL.</Text>
   </Stack></Paper>
   {(error||state.error)&&<Alert color="red" title="Playback error">{error||state.error}</Alert>}
   <Paper withBorder p="md"><Stack>

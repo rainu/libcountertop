@@ -1,3 +1,5 @@
+export type SMBSettings = {enabled:boolean;host:string;port:number;share:string;username:string;domain:string};
+export type SMBView = SMBSettings & {password_set:boolean;labels:Record<string,string>};
 export type YouTubeConnection = { state: string; premium: boolean; code?: string; verification_url?: string; expires_at?: string; error?: string };
 export type VideoState = { state: string; position: number; duration: number; width: number; height: number; frames: number; seekable: boolean; error?: string };
 export type Choice = { value: string; label: string };
@@ -150,6 +152,9 @@ function post(path: string, body: unknown = {}) {
 }
 
 export const api = {
+ smb: () => call<SMBView>("/smb/"),
+ smbSave: (value:SMBSettings & {password?:string;clear_password?:boolean}) => call<object>("/smb/", {...json(value),method:"PUT"}),
+ smbTest: (value:SMBSettings & {password?:string}) => call<{ok:boolean;code:string;message:string}>("/smb/test",json(value)),
  youtube: () => call<YouTubeConnection>("/youtube/"),
  youtubeCommand: (action: "connect" | "refresh" | "cancel" | "disconnect") => call<object>("/youtube/", json({ action })),
  video: () => call<VideoState>("/video/"),

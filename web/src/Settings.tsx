@@ -2,16 +2,17 @@ import { Fragment, type ReactNode } from "react";
 import { Divider, Group, Paper, Stack, Text, TextInput, Button, ThemeIcon, Title } from "@mantine/core";
 import { notifications } from "./notify";
 import { FieldRow } from "./Field";
-import { groupID, type Section } from "./sections";
+import { groupID, type Section, type Service } from "./sections";
 
 type Props = {
   section: Section;
   focus: string;
   change: (domain: string, name: string, value: string) => Promise<void>;
   extra?: ReactNode;
+  services?: Partial<Record<Service, ReactNode>>;
 };
 
-export function Settings({ section, focus, change, extra }: Props) {
+export function Settings({ section, focus, change, extra, services }: Props) {
   return (
     <Stack gap="lg" maw={760}>
       <Group gap="sm">
@@ -23,6 +24,7 @@ export function Settings({ section, focus, change, extra }: Props) {
       {extra}
       {section.groups.map((g, i) => (
         <Stack key={g.title} gap={6} id={groupID(section.slug, i)} style={{ scrollMarginTop: 72 }}>
+          {g.service ? services?.[g.service] : <>
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.6} px={4}>
             {g.title}
           </Text>
@@ -49,6 +51,7 @@ export function Settings({ section, focus, change, extra }: Props) {
               </Fragment>
             ))}
           </Paper>
+          </>}
         </Stack>
       ))}
     </Stack>

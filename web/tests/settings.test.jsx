@@ -45,3 +45,24 @@ test("home, alerts, cameras and system retain and render their fields", () => {
     assert.ok(html.includes(s.groups[0].entries[0].field.title));
   }
 });
+
+test("connected service pages remain discoverable without ordinary settings", () => {
+  const [connected] = sections([], ["video", "smb", "youtube"]);
+  assert.equal(connected.key, "settings.features");
+  assert.equal(connected.slug, "features");
+  assert.deepEqual(connected.groups.map((g) => [g.title, g.service]), [["SMB", "smb"], ["YouTube", "youtube"]]);
+  assert.equal(connected.count, 2);
+  const html = renderToStaticMarkup(<MantineProvider forceColorScheme="light"><Settings section={connected} focus="" change={async () => {}} services={{smb: <div>SMB settings card</div>, youtube: <div>YouTube account card</div>}} /></MantineProvider>);
+  assert.ok(html.includes('id="g-features-0"'));
+  assert.ok(html.includes('id="g-features-1"'));
+  assert.ok(html.includes("SMB settings card"));
+  assert.ok(html.includes("YouTube account card"));
+  assert.deepEqual(sections([], ["video"]), []);
+});
+
+test("service cards retain the localized connected-services section and existing groups", () => {
+  const [connected] = sections([{domain:"cast", section_key:"settings.features", section:"Verbundene Dienste", fields:[field("cast.enabled")]}], ["youtube"]);
+  assert.equal(connected.title, "Verbundene Dienste");
+  assert.equal(connected.groups[0].entries[0].domain, "cast");
+  assert.deepEqual(connected.groups.map((g) => g.service).filter(Boolean), ["youtube"]);
+});

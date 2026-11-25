@@ -2061,3 +2061,6 @@ webaccess.webdav_login: "Utente: owner · Password amministratore EchoLocal"
 
 features.youtube: YouTube
 features.youtube.hint: Collega un account YouTube
+
+features.smb: Video di rete SMB
+features.smb.hint: SMB 2/3

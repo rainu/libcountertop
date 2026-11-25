@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
+	"github.com/ygelfand/libcountertop/pkg/media/smburl"
 	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
 	"github.com/ygelfand/libcountertop/pkg/media/youtubeurl"
 )
@@ -33,6 +34,10 @@ type Handler struct {
 func New(p Player) *Handler { return &Handler{player: p} }
 
 func ValidURL(raw string) bool {
+	if strings.HasPrefix(raw, "smb:") {
+		_, err := smburl.Parse(raw)
+		return err == nil
+	}
 	if len(raw) > 8192 {
 		return false
 	}
@@ -87,7 +92,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ValidURL(cmd.URL) {
 			http.Error(
 				w,
-				"Use an HTTP(S) media URL without embedded credentials or a fragment",
+				"Use an HTTP(S) media URL or smb://media/folder/video.mp4 without embedded credentials",
 				400,
 			)
 			return
@@ -120,6 +125,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		http.Error(w, "Unknown playback action", 400)
+		return
+	}
+	var public interface{ PlaybackError() string }
+	if errors.As(err, &public) {
+		http.Error(w, public.PlaybackError(), http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, smburl.ErrURL) {
+		http.Error(w, smburl.ErrURL.Error(), http.StatusBadRequest)
 		return
 	}
 	if errors.Is(err, youtubeurl.ErrURL) {
