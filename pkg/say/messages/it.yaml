@@ -2058,3 +2058,6 @@ access.setting.webdav: File del dispositivo tramite WebDAV (HTTPS)
 frontend.entity.webdav: File del dispositivo tramite WebDAV (HTTPS)
 webaccess.webdav_address: Indirizzo WebDAV
 webaccess.webdav_login: "Utente: owner · Password amministratore EchoLocal"
+
+features.youtube: YouTube
+features.youtube.hint: Collega un account YouTube

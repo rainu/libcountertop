@@ -1,3 +1,4 @@
+import { YouTubeService } from "./YouTubeService";
 import { Video } from "./Video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -282,7 +283,7 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
             section={current}
             focus={focus}
             change={change}
-            extra={current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
+            extra={current.key === "settings.features" && device.pages?.includes("youtube") ? <YouTubeService onSignedOut={signedOut} /> : current.slug === "network" && device.wifi ? <Wifi name={device.name} /> : undefined}
           />
         ) : app === "video" ? (
           <Video />

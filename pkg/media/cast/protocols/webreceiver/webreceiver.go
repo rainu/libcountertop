@@ -60,10 +60,11 @@ type frame struct {
 }
 
 type Receiver struct {
-	env    cast.Env
-	o      Options
-	player *urlplayer.Player
-	hooks  string
+	youtube *YouTube
+	env     cast.Env
+	o       Options
+	player  *urlplayer.Player
+	hooks   string
 
 	mu           sync.Mutex
 	tools        *engine.Page
@@ -140,17 +141,35 @@ func (r *Receiver) run(ctx context.Context) error {
 	}
 	defer func() { _ = page.Close() }()
 	r.opened(page.Window)
-	defer page.Events.Listen(logged)()
-	for _, call := range []struct {
-		method string
-		params any
-	}{
-		{"Runtime.enable", nil},
-		{"Page.enable", nil},
-		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": r.hooks}},
-	} {
-		if err := page.Call(call.method, call.params); err != nil {
+	if r.youtube == nil {
+		defer page.Events.Listen(logged)()
+	}
+	if r.youtube != nil {
+		if err := page.Call(
+			"Emulation.setUserAgentOverride",
+			map[string]any{"userAgent": youtubeUserAgent()},
+		); err != nil {
 			return err
+		}
+		source := "if (location.hostname === \"www.youtube.com\" && (location.pathname.startsWith(\"/embed/\") || location.pathname === \"/watch\" || location.pathname.startsWith(\"/tv\"))) {\n" + mediaHooks(
+			r.env,
+			r.o.BusPort,
+			false,
+		) + "\nif(location.pathname === \"/watch\"){\n" + youtubeSiteJS + "\n}\nif(location.pathname.startsWith(\"/tv\")){\n" + youtubeTVJS + "\n}\n}"
+		if err := page.InjectFrames(ctx, source); err != nil {
+			return err
+		}
+	} else {
+		for _, call := range []struct {
+			method string
+			params any
+		}{
+			{"Runtime.enable", nil}, {"Page.enable", nil},
+			{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": r.hooks}},
+		} {
+			if err := page.Call(call.method, call.params); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -192,6 +211,9 @@ func (r *Receiver) serve() (*http.Server, error) {
 
 func (r *Receiver) handler() http.Handler {
 	mux := http.NewServeMux()
+	if r.youtube != nil {
+		mux.HandleFunc("/youtube", r.youtube.serve)
+	}
 	mux.HandleFunc("/v2/ipc", r.bus)
 	mux.HandleFunc("/media", r.media.serve)
 	mux.HandleFunc("/plays", r.plays)
@@ -656,9 +678,22 @@ func (r *Receiver) plays(w http.ResponseWriter, req *http.Request) {
 
 type remote struct{ r *Receiver }
 
-func (m remote) Play() error  { return m.r.inject(cast.TypePlay, nil) }
-func (m remote) Pause() error { return m.r.inject(cast.TypePause, nil) }
+func (m remote) Play() error {
+	if m.r.youtube != nil {
+		return m.r.youtube.Play()
+	}
+	return m.r.inject(cast.TypePlay, nil)
+}
+func (m remote) Pause() error {
+	if m.r.youtube != nil {
+		return m.r.youtube.Pause()
+	}
+	return m.r.inject(cast.TypePause, nil)
+}
 func (m remote) Stop() error {
+	if m.r.youtube != nil {
+		return m.r.youtube.Stop()
+	}
 	if m.r.env.End == nil {
 		return m.r.inject(cast.TypeStopMedia, nil)
 	}
@@ -669,6 +704,9 @@ func (m remote) Stop() error {
 func (m remote) Failed(err error) { m.r.media.failed(err) }
 
 func (m remote) Seek(to time.Duration) error {
+	if m.r.youtube != nil {
+		return m.r.youtube.Seek(to)
+	}
 	return m.r.inject(cast.TypeSeek, map[string]any{"currentTime": to.Seconds()})
 }
 

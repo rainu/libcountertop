@@ -1,3 +1,4 @@
+export type YouTubeConnection = { state: string; premium: boolean; code?: string; verification_url?: string; expires_at?: string; error?: string };
 export type VideoState = { state: string; position: number; duration: number; width: number; height: number; frames: number; seekable: boolean; error?: string };
 export type Choice = { value: string; label: string };
 
@@ -149,6 +150,8 @@ function post(path: string, body: unknown = {}) {
 }
 
 export const api = {
+ youtube: () => call<YouTubeConnection>("/youtube/"),
+ youtubeCommand: (action: "connect" | "refresh" | "cancel" | "disconnect") => call<object>("/youtube/", json({ action })),
  video: () => call<VideoState>("/video/"),
  videoCommand: (request: {action: string; url?: string; position?: number}) => post("/video/", request),
   controlPair: (url: string) => call<ControlPair>("/control/pairing", json({ url })),

@@ -14,6 +14,7 @@ import (
 
 	"github.com/ygelfand/libcountertop/pkg/media/cast"
 	"github.com/ygelfand/libcountertop/pkg/media/urlplayer"
+	"github.com/ygelfand/libcountertop/pkg/media/youtubeurl"
 )
 
 type Player interface {
@@ -36,6 +37,12 @@ func ValidURL(raw string) bool {
 		return false
 	}
 	u, err := url.Parse(raw)
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.User == nil {
+		if _, youtube, _ := youtubeurl.Parse(raw); youtube {
+			// Let the common router produce the actionable YouTube validation error.
+			return true
+		}
+	}
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" &&
 		u.User == nil &&
 		u.Fragment == ""
@@ -113,6 +120,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		http.Error(w, "Unknown playback action", 400)
+		return
+	}
+	if errors.Is(err, youtubeurl.ErrURL) {
+		http.Error(w, youtubeurl.ErrURL.Error(), http.StatusBadRequest)
 		return
 	}
 	if err != nil {

@@ -42,9 +42,19 @@ try {
  await page.getByRole("button",{name:"Stop",exact:true}).click();
  assert.deepEqual(writes.map(x=>x.action),["load","pause","play","seek","stop"]);
  assert.equal(writes[0].url,"https://example.com/test.mp4");assert.equal(writes[3].position,12);
+ for(const url of ["https://www.youtube.com/watch?v=M7lc1UVf-VE","https://youtu.be/M7lc1UVf-VE","https://music.youtube.com/watch?v=M7lc1UVf-VE","https://music.youtube.com/podcast/cJjMmDeOAZ4","https://youtube.com/live/M7lc1UVf-VE","https://youtu.be/M7lc1UVf-VE#t=30"]){
+  await page.getByLabel("Video or stream URL").fill(url);
+  await page.getByRole("button",{name:"Play on device",exact:true}).click();
+  assert.equal(writes.at(-1).url,url);
+  await page.getByRole("button",{name:"Stop",exact:true}).click();
+ }
+ state={...state,state:"error",error:"The owner does not allow this video in an embedded player"};
+ await page.getByText(state.error,{exact:true}).waitFor();
+ await page.getByRole("button",{name:"Stop",exact:true}).click();
+
  await page.setViewportSize({width:390,height:844});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:resolve(import.meta.dirname,"../../video-mobile.png")});
  assert.deepEqual(errors,[]);
- console.log("PASS: video navigation, URL load, pause/resume, seek, stop, mobile layout");
+ console.log("PASS: video navigation, direct/YouTube/Music URL load, pause/resume, seek, stop, actionable errors, mobile layout");
 } finally {await browser.close();await new Promise(r=>server.close(r))}
