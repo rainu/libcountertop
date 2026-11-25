@@ -65,3 +65,5 @@ tracks. They do not claim physical display, speaker, acoustic synchronization
 or sustained rendering performance. Those require the consuming device tests.
 
 Refs rainu/echolocal#79.
+
+MP4 AAC probes a bounded eight-frame prefix when native fallback is available: an LC ASC may hide implicit HE-AAC/SBR. Probing uses an isolated decoder, then restarts a fresh one for playback. Unsupported profiles discovered later fail explicitly rather than silently skipping all sound. Device interleave tests gate raw-picture consumption on the PCM clock, reproducing MPEG-PS packet-burst deadlocks that unthrottled decode tests miss.

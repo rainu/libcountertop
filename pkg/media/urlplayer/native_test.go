@@ -85,7 +85,7 @@ func TestNativeFixtureMatrix(t *testing.T) {
 		t.Run(e.Name(), func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 			defer cancel()
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + e.Name()}, nil, 0)
 			defer tr.close()
 			// Exercise the shared native contract independently of the primary hardware
@@ -184,7 +184,7 @@ func TestNativeFixtureRouting(t *testing.T) {
 			continue
 		}
 		t.Run(e.Name(), func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + e.Name()}, nil, 0)
 			defer tr.close()
 			if err := tr.begin(tr.ctx); err != nil {
@@ -195,6 +195,9 @@ func TestNativeFixtureRouting(t *testing.T) {
 			}
 			if e.Name() == "mp4-h264-aac-lc.mp4" && tr.format != MP4 {
 				t.Fatal("existing hardware path was replaced")
+			}
+			if e.Name() == "mp4-h264-heaac.mp4" && tr.format != "native" {
+				t.Fatal("implicit SBR did not select the native decoder")
 			}
 			t.Logf("route=%s codec=%08x", tr.format, tr.picture.Codec)
 		})
@@ -209,7 +212,7 @@ func TestNativeSeekAndStop(t *testing.T) {
 	defer server.Close()
 	for _, name := range []string{"asf-wmv2-wma2.wmv", "avi-h264-mp3.avi"} {
 		t.Run(name, func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, time.Second)
 			defer tr.close()
 			if err := tr.openNative(tr.ctx); err != nil {
@@ -245,7 +248,7 @@ func TestNativeBoundaries(t *testing.T) {
 	defer server.Close()
 	for _, name := range []string{"oversize.avi", "overrate.avi", "data.mp4"} {
 		t.Run(name, func(t *testing.T) {
-			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client(), Resample: func(int) func([]int16) []int16 { return func(p []int16) []int16 { return p } }})
 			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, 0)
 			defer tr.close()
 			err := tr.begin(tr.ctx)
@@ -260,6 +263,66 @@ func TestNativeBoundaries(t *testing.T) {
 			}
 			if nativeMessage(err) != "Video decoder: VIDEO_RESOURCE_LIMIT" {
 				t.Fatalf("wanted resource limit, got %v", err)
+			}
+		})
+	}
+}
+
+// Reproduce long video-packet bursts in MPEG-PS against a bounded raw-picture
+// consumer whose clock can advance only when more PCM is delivered.
+func TestNativeInterleaving(t *testing.T) {
+	helper, root := os.Getenv("ECHOLOCAL_NATIVE_HELPER"), os.Getenv("ECHOLOCAL_NATIVE_FIXTURES")
+	if helper == "" || root == "" {
+		t.Skip("explicit native fixtures required")
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(root)))
+	defer server.Close()
+	for _, name := range []string{"ps-mpeg1-mp2.mpg", "ps-mpeg2-ac3.mpg"} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			p := New(Options{Native: &Native{Helper: helper}, Screen: true, HTTP: server.Client()})
+			tr := p.track(cast.Media{ContentID: server.URL + "/" + name}, nil, 0)
+			defer tr.close()
+			if err := tr.openNative(ctx); err != nil {
+				t.Fatal(err)
+			}
+			var clock atomic.Int64
+			pictureDone := make(chan error, 1)
+			go func() {
+				for {
+					_, at, err := tr.picture.Next(ctx)
+					if err != nil {
+						pictureDone <- err
+						return
+					}
+					for at > time.Duration(clock.Load())+2*time.Millisecond {
+						select {
+						case <-ctx.Done():
+							pictureDone <- ctx.Err()
+							return
+						case <-time.After(time.Millisecond):
+						}
+					}
+				}
+			}()
+			var samples int64
+			for {
+				pcm, err := tr.dec.next()
+				samples += int64(len(pcm) / 2)
+				clock.Store(samples * int64(time.Second) / 48000)
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					t.Fatal("audio/video interleave deadlock:", err)
+				}
+			}
+			if err := <-pictureDone; !errors.Is(err, io.EOF) {
+				t.Fatal(err)
+			}
+			if samples < 48000 {
+				t.Fatal("incomplete playback")
 			}
 		})
 	}

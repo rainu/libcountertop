@@ -266,6 +266,25 @@ func (t *track) openMP4(ctx context.Context, s stream) error {
 			if err != nil {
 				return err
 			}
+			// An AAC-LC ASC can carry implicit SBR in its frame payload. Probe
+			// a bounded prefix before publishing metadata/output, then create
+			// a fresh decoder: failed HE-AAC must enter the native path rather
+			// than becoming a silent, apparently successful audio stream.
+			if t.player.o.Native != nil && name == codecAACName {
+				probe, _, err := audioFrames(ctx, name, private, rate)
+				if err != nil {
+					return err
+				}
+				for _, sample := range tr.Samples[:min(8, len(tr.Samples))] {
+					data, err := sample.GetPayload()
+					if err != nil {
+						return err
+					}
+					if _, err = probe(data); err != nil {
+						return err
+					}
+				}
+			}
 			if frame, hz, err = audioFrames(ctx, name, private, rate); err != nil {
 				return err
 			}

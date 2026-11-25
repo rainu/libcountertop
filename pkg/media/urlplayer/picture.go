@@ -13,6 +13,7 @@ import (
 
 	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h264"
 	"github.com/bluenviron/mediacommon/v2/pkg/codecs/h265"
+	aacpcm "github.com/tphakala/go-aac/pcm"
 
 	"github.com/ygelfand/libcountertop/pkg/media/cenc"
 	"github.com/ygelfand/libcountertop/pkg/media/playback"
@@ -337,6 +338,9 @@ func (x *muxed) next() ([]int16, error) {
 		out, err := x.frame(s.data)
 		if err == nil {
 			return out, nil
+		}
+		if errors.Is(err, aacpcm.ErrUnsupported) {
+			return nil, nativeFailure("UNSUPPORTED_CODEC_PROFILE")
 		}
 		x.failures++
 		if x.failures == 1 || x.failures%500 == 0 {
