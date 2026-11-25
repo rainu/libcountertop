@@ -24,6 +24,7 @@ var errIdle = errors.New("urlplayer: nothing is loaded")
 const breakRGB = 0xffcc00
 
 type Options struct {
+	Native   *Native
 	HTTP     *http.Client
 	Output   playback.Output
 	Resample func(from int) func(stereo []int16) []int16
@@ -47,6 +48,7 @@ type Player struct {
 	shown    *track
 	paused   bool
 	failed   bool
+	failure  string
 	metadata *cast.Metadata
 	marks    []playback.Mark
 	counted  int64
@@ -121,6 +123,7 @@ func (p *Player) fresh() {
 	defer p.mu.Unlock()
 	p.counted = 0
 	p.failed = false
+	p.failure = ""
 	p.live = nil
 	p.program = nil
 	slog.Debug("the url player forgot the live window")
@@ -287,6 +290,7 @@ func (p *Player) Pause() error { return p.pause(nil) }
 func (p *Player) Stop() error {
 	p.mu.Lock()
 	p.failed = false
+	p.failure = ""
 	p.mu.Unlock()
 	if !p.stop(nil, p.o.Output.Stop) {
 		p.o.Output.Stop(nil)

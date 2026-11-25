@@ -118,9 +118,16 @@ static void *output(void *arg) {
 	return NULL;
 }
 
+#include "raw-video.h"
+
 static void *make(void *arg) {
 	video *v = arg;
-	const char *mime = mime_of(v->kind);
+	if (v->kind == CODEC_RGBA) {
+  if (ANativeWindow_setBuffersGeometry(v->win,v->w,v->h,WINDOW_FORMAT_RGBA_8888)) {v->failed=1;return NULL;}
+  if (pthread_create(&v->out,NULL,raw_output,v)) {v->failed=1;return NULL;}
+  v->has_out=1;v->ready=1;return NULL;
+ }
+ const char *mime = mime_of(v->kind);
 	int secure = v->crypto && v->decoder[0] && AMediaCrypto_requiresSecureDecoderComponent(mime);
 	AMediaCodec *c = NULL;
 	if (!secure) c = AMediaCodec_createDecoderByType(mime);
@@ -152,7 +159,8 @@ static void *make(void *arg) {
 }
 
 int video_open(video *v, ANativeWindow *win, uint32_t codec, uint32_t w, uint32_t h, AMediaCrypto *crypto, const char *decoder) {
-	if (!mime_of(codec)) return ERR_ARGS;
+	if (codec == CODEC_RGBA) { if (crypto || w == 0 || h == 0 || w > 854 || h > 480) return ERR_ARGS; }
+ else if (!mime_of(codec)) return ERR_ARGS;
 	memset(v, 0, sizeof *v);
 	snprintf(v->decoder, sizeof v->decoder, "%s", decoder ? decoder : "");
 	v->win = win;
@@ -171,6 +179,7 @@ int video_open(video *v, ANativeWindow *win, uint32_t codec, uint32_t w, uint32_
 int video_sample(video *v, int64_t pts, uint32_t flags, const drm_sample *crypt, const uint8_t *data, uint32_t len) {
 	if (v->failed) return ERR_CODEC;
 	if (!v->ready) return ERR_AGAIN;
+ if (v->kind==CODEC_RGBA) return raw_sample(v,pts,flags,crypt,data,len);
 	ssize_t idx = AMediaCodec_dequeueInputBuffer(v->codec, 5000);
 	if (idx < 0) {
 		if (!fatal(idx)) return ERR_AGAIN;
@@ -214,7 +223,9 @@ int video_flush(video *v) {
 	pthread_mutex_lock(&v->park_mu);
 	v->flushing = 1;
 	while (!v->parked && !v->closing) pthread_cond_wait(&v->park_cv, &v->park_mu);
-	int err = AMediaCodec_flush(v->codec);
+	int err=0;
+ if (v->kind==CODEC_RGBA) raw_clear(v);
+ else err = AMediaCodec_flush(v->codec);
 	v->gen++;
 	v->shown = v->dropped = 0;
 	v->ended = 0;
@@ -249,7 +260,8 @@ void video_close(video *v) {
 		AMediaCodec_delete(v->codec);
 		v->codec = NULL;
 	}
-	pthread_mutex_destroy(&v->mu);
+	if (v->kind==CODEC_RGBA) raw_clear(v);
+ pthread_mutex_destroy(&v->mu);
 	pthread_mutex_destroy(&v->park_mu);
 	pthread_cond_destroy(&v->park_cv);
 	v->has_maker = v->has_out = 0;

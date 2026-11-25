@@ -6,7 +6,11 @@
 
 #include "drm.h"
 
+typedef struct { uint8_t *data; int64_t pts; uint32_t flags; } raw_frame;
+
 typedef struct {
+ raw_frame raw[3];
+ int raw_head, raw_count;
 	AMediaCodec *codec;
 	AMediaCrypto *crypto;
 	ANativeWindow *win;

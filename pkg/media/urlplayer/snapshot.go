@@ -22,6 +22,7 @@ type Snapshot struct {
 // never take the decoder mutex: a paused decoder can be blocked on its queues.
 type trackSnapshot struct {
 	failed        bool
+	message       string
 	width, height int
 	duration      time.Duration
 	seekable      bool
@@ -35,6 +36,11 @@ func (p *Player) Snapshot() Snapshot {
 	if failedPlayback {
 		s.State = "error"
 		s.Error = "Video playback failed. Try a supported codec or a different stream."
+		p.mu.Lock()
+		if p.failure != "" {
+			s.Error = p.failure
+		}
+		p.mu.Unlock()
 		return s
 	}
 	if t == nil {
@@ -52,6 +58,9 @@ func (p *Player) Snapshot() Snapshot {
 	switch {
 	case meta.failed:
 		s.State, s.Error = "error", "Could not open or decode this media. Use a direct supported video or stream URL."
+		if meta.message != "" {
+			s.Error = meta.message
+		}
 	case shown != t:
 		s.State = "loading"
 	default:

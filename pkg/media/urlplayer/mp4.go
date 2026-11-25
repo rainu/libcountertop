@@ -296,6 +296,13 @@ func (t *track) openMP4(ctx context.Context, s stream) error {
 			tracks = append(tracks, newMP4Track(tr, true))
 		}
 	}
+	if t.screen && pic == nil && t.player.o.Native != nil {
+		for _, tr := range p.Tracks {
+			if tr.Codec.IsVideo() {
+				return errUnplayable
+			}
+		}
+	}
 	if frame == nil {
 		return fmt.Errorf("%w: an MP4 without AAC or Opus sound", errUnplayable)
 	}

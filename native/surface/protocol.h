@@ -54,6 +54,7 @@
 #define CODEC_AVC 2
 #define CODEC_HEVC 3
 #define CODEC_VP8 4
+#define CODEC_RGBA 5
 
 #define SAMPLE_KEY 1
 #define SAMPLE_END 2
