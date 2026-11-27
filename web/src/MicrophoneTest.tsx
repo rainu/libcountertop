@@ -37,8 +37,7 @@ export function MicrophoneTest() {
   const labels: Record<string, string> = { idle: "Ready to record", recording: "● RECORDING — speak now (max 8 s)", ready: "Ready to play", playing: "Playing on Echo", error: "Test stopped" };
   return <Paper withBorder p="md" data-testid="microphone-test"><Stack gap="sm">
     <Title order={4}>Microphone test</Title>
-    <Text size="sm">Processed recognition signal: microphone mixing, echo cancellation, suppression, low-cut and leveling. Change the settings below between takes. No conversation is started.</Text>
-    <Text size="sm">Audio stays in this Echo’s memory, never uploaded or saved. It is deleted when you leave this section, after a lost connection, or after 2 minutes. Playback starts only after capture stops; wake words are paused while recording or playing.</Text>
+    <Text size="sm">Processed recognition signal: microphone mixing, echo cancellation, suppression, low-cut and leveling. Adjust the microphone settings between takes. No conversation is started.</Text>
     <Text role="status" fw={700} c={state.phase === "recording" ? "red" : undefined}>{labels[state.phase] ?? state.phase} · {state.seconds.toFixed(1)} s</Text>
     {state.processing && <Text size="xs">Take settings: {state.processing}</Text>}
     {(error || state.error) && <Alert color="red" role="alert">{error || state.error}</Alert>}
