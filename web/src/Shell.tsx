@@ -281,6 +281,7 @@ export function Shell({ device, onOut }: { device: Device; onOut: () => void }) 
       <AppShell.Main>
         {current ? (
           <Settings
+            microphoneTest={device.pages?.includes("microphone-test")}
             section={current}
             focus={focus}
             change={change}

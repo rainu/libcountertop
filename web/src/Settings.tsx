@@ -1,3 +1,4 @@
+import { MicrophoneTest } from "./MicrophoneTest";
 import { Fragment, type ReactNode } from "react";
 import { Divider, Group, Paper, Stack, Text, TextInput, Button, ThemeIcon, Title } from "@mantine/core";
 import { notifications } from "./notify";
@@ -9,10 +10,11 @@ type Props = {
   focus: string;
   change: (domain: string, name: string, value: string) => Promise<void>;
   extra?: ReactNode;
+  microphoneTest?: boolean;
   services?: Partial<Record<Service, ReactNode>>;
 };
 
-export function Settings({ section, focus, change, extra, services }: Props) {
+export function Settings({ section, focus, change, extra, services, microphoneTest }: Props) {
   return (
     <Stack gap="lg" maw={760}>
       <Group gap="sm">
@@ -22,6 +24,7 @@ export function Settings({ section, focus, change, extra, services }: Props) {
         <Title order={3}>{section.title}</Title>
       </Group>
       {extra}
+      {microphoneTest && section.groups.some(g => g.entries.some(e => e.domain === "microphone" && e.field.name === "gain")) && <MicrophoneTest key={section.slug} />}
       {section.groups.map((g, i) => (
         <Stack key={g.title} gap={6} id={groupID(section.slug, i)} style={{ scrollMarginTop: 72 }}>
           {g.service ? services?.[g.service] : <>
