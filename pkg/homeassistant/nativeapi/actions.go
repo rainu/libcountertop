@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/ygelfand/libcountertop/pkg/actions"
 	"hash/fnv"
 	"log/slog"
+
+	"github.com/ygelfand/libcountertop/pkg/actions"
 
 	esphome "github.com/ygelfand/go-esphome-device"
 	"github.com/ygelfand/go-esphome-device/api"
@@ -100,7 +101,13 @@ func actionKey(name string) uint32 {
 	_, _ = h.Write([]byte("action:" + name))
 	return h.Sum32()
 }
-func executeAction(ctx context.Context, action *esphome.Action, request *api.ExecuteServiceRequest, send func(proto.Message) error) error {
+
+func executeAction(
+	ctx context.Context,
+	action *esphome.Action,
+	request *api.ExecuteServiceRequest,
+	send func(proto.Message) error,
+) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -109,7 +116,9 @@ func executeAction(ctx context.Context, action *esphome.Action, request *api.Exe
 		if request.CallId == 0 {
 			return nil
 		}
-		return send(&api.ExecuteServiceResponse{CallId: request.CallId, ErrorMessage: "invalid_params"})
+		return send(
+			&api.ExecuteServiceResponse{CallId: request.CallId, ErrorMessage: "invalid_params"},
+		)
 	}
 	for i, arg := range action.Args {
 		value := request.Args[i]

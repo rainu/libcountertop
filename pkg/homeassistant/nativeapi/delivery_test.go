@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	esphome "github.com/ygelfand/go-esphome-device"
 	"github.com/ygelfand/go-esphome-device/api"
 	"google.golang.org/protobuf/proto"
-	"testing"
 )
 
 type deliveryReceipt struct {
@@ -42,7 +43,10 @@ func TestDeferredNativeActionDelivery(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			receipt := &deliveryReceipt{Accepted: true, State: "accepted", fail: tc.encodeFail}
-			a := &esphome.Action{Name: "transfer", Answers: true, Args: []esphome.Arg{{Name: "session_id", Type: esphome.ArgString}},
+			a := &esphome.Action{
+				Name:    "transfer",
+				Answers: true,
+				Args:    []esphome.Arg{{Name: "session_id", Type: esphome.ArgString}},
 				Run: func(c esphome.Call) (any, error) {
 					if c.String("session_id") != "agent:test:next" {
 						t.Fatal("target changed")
@@ -51,19 +55,29 @@ func TestDeferredNativeActionDelivery(t *testing.T) {
 						cancel()
 					}
 					return receipt, nil
-				}}
+				},
+			}
 			sent := 0
-			_ = executeAction(ctx, a, &api.ExecuteServiceRequest{CallId: tc.id, ReturnResponse: tc.answer, Args: []*api.ExecuteServiceArgument{{String_: "agent:test:next"}}}, func(m proto.Message) error {
-				sent++
-				r := m.(*api.ExecuteServiceResponse)
-				if r.CallId != tc.id {
-					t.Fatal("correlation lost")
-				}
-				if tc.sendFail {
-					return errors.New("synthetic lost write")
-				}
-				return nil
-			})
+			_ = executeAction(
+				ctx,
+				a,
+				&api.ExecuteServiceRequest{
+					CallId:         tc.id,
+					ReturnResponse: tc.answer,
+					Args:           []*api.ExecuteServiceArgument{{String_: "agent:test:next"}},
+				},
+				func(m proto.Message) error {
+					sent++
+					r := m.(*api.ExecuteServiceResponse)
+					if r.CallId != tc.id {
+						t.Fatal("correlation lost")
+					}
+					if tc.sendFail {
+						return errors.New("synthetic lost write")
+					}
+					return nil
+				},
+			)
 			if len(receipt.calls) != 1 || receipt.calls[0] != tc.delivered {
 				t.Fatal(receipt.calls)
 			}
@@ -74,7 +88,10 @@ func TestDeferredNativeActionDelivery(t *testing.T) {
 	}
 }
 func TestNativeActionKeyMatchesDiscovery(t *testing.T) {
-	a := &esphome.Action{Name: "test_delivery", Run: func(esphome.Call) (any, error) { return nil, nil }}
+	a := &esphome.Action{
+		Name: "test_delivery",
+		Run:  func(esphome.Call) (any, error) { return nil, nil },
+	}
 	ents := esphome.NewEntities()
 	if err := ents.AddActions(a); err != nil {
 		t.Fatal(err)

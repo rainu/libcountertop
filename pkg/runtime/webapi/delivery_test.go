@@ -3,12 +3,13 @@ package webapi
 import (
 	"context"
 	"errors"
-	"github.com/go-chi/chi/v5"
-	esphome "github.com/ygelfand/go-esphome-device"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	esphome "github.com/ygelfand/go-esphome-device"
 )
 
 type deliveredAnswer struct{ calls []bool }
@@ -41,7 +42,11 @@ func TestHTTPDeferredActionDelivery(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			answer := &deliveredAnswer{}
 			a := &API{o: Options{States: &deliveryStates{answer: answer}}}
-			r := httptest.NewRequest("POST", Prefix+"/actions/transfer", strings.NewReader(`{"args":{"session_id":"agent:test:next"}}`))
+			r := httptest.NewRequest(
+				"POST",
+				Prefix+"/actions/transfer",
+				strings.NewReader(`{"args":{"session_id":"agent:test:next"}}`),
+			)
 			route := chi.NewRouteContext()
 			route.URLParams.Add("name", "transfer")
 			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, route))

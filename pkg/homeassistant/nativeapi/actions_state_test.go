@@ -24,15 +24,24 @@ func TestConcurrentActionWrapperPreservesLiveEntityStates(t *testing.T) {
 		t.Fatal(err)
 	}
 	receiptDelivered := make(chan bool, 1)
-	action := &esphome.Action{Name: "synthetic_transfer", Answers: true, Run: func(esphome.Call) (any, error) {
-		return &wireReceipt{delivered: receiptDelivered}, nil
-	}}
+	action := &esphome.Action{
+		Name:    "synthetic_transfer",
+		Answers: true,
+		Run: func(esphome.Call) (any, error) {
+			return &wireReceipt{delivered: receiptDelivered}, nil
+		},
+	}
 	if err := ents.AddActions(action); err != nil {
 		t.Fatal(err)
 	}
 	closed := make(chan struct{}, 1)
 	next := esphome.Chain(ents, &closedHandler{closed: closed})
-	h := &actionHandler{Entities: ents, next: next, slots: make(chan struct{}, 2), actions: deliveryActionMap([]*esphome.Action{action}, []string{action.Name})}
+	h := &actionHandler{
+		Entities: ents,
+		next:     next,
+		slots:    make(chan struct{}, 2),
+		actions:  deliveryActionMap([]*esphome.Action{action}, []string{action.Name}),
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +135,8 @@ discovery:
 	}
 	send(&api.ExecuteServiceRequest{Key: discovered, CallId: 71, ReturnResponse: true})
 	answer, ok := recv().(*api.ExecuteServiceResponse)
-	if !ok || !answer.Success || answer.CallId != 71 || string(answer.ResponseData) != `{"accepted":true,"state":"accepted"}` {
+	if !ok || !answer.Success || answer.CallId != 71 ||
+		string(answer.ResponseData) != `{"accepted":true,"state":"accepted"}` {
 		t.Fatalf("correlated acceptance response missing: %v", answer)
 	}
 	select {
