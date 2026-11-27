@@ -82,12 +82,23 @@ func TestNativeActionKeyMatchesDiscovery(t *testing.T) {
 	// SDK discovery must use exactly the same action key as our delivery wrapper.
 	seen := false
 	for _, a := range ents.Actions() {
-		if actionMap([]*esphome.Action{&a})[actionKey(a.Name)] == nil {
+		if deliveryActionMap([]*esphome.Action{&a}, []string{a.Name})[actionKey(a.Name)] == nil {
 			t.Fatal("missing action")
 		}
 		seen = true
 	}
 	if !seen {
 		t.Fatal("missing discovery")
+	}
+}
+
+func TestReceiptDispatchIsOptIn(t *testing.T) {
+	all := []*esphome.Action{{Name: "start"}, {Name: "stop"}, {Name: "transfer"}}
+	chosen := deliveryActionMap(all, []string{"transfer"})
+	if len(chosen) != 1 || chosen[actionKey("transfer")] == nil {
+		t.Fatal("opt-in lost")
+	}
+	if len(deliveryActionMap(all, nil)) != 0 {
+		t.Fatal("legacy actions intercepted")
 	}
 }

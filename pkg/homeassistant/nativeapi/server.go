@@ -265,14 +265,6 @@ func (a *Server) subscribed() {
 	}
 }
 
-func actionMap(all []*esphome.Action) map[uint32]*esphome.Action {
-	out := make(map[uint32]*esphome.Action, len(all))
-	for _, a := range all {
-		out[actionKey(a.Name)] = a
-	}
-	return out
-}
-
 func deliveryActionMap(all []*esphome.Action, names []string) map[uint32]*esphome.Action {
 	out := map[uint32]*esphome.Action{}
 	for _, a := range all {
