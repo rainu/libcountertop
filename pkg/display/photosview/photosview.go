@@ -34,7 +34,8 @@ type Options struct {
 	Display  photoframe.Display
 }
 
-type App struct{}
+// A nonzero-sized identity is required: pointers to empty structs may alias.
+type App struct{ identity byte }
 
 func (*App) Covers() bool { return true }
 
