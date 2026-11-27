@@ -41,7 +41,7 @@ try{
  const page=await browser.newPage({viewport:{width:1280,height:800}});page.on("pageerror",e=>errors.push(e.message));
  await page.goto("http://127.0.0.1:"+server.address().port+"/#volume");
  const card=page.getByTestId("microphone-test");await card.waitFor();
- const record=card.getByRole("button",{name:"Record / replace take (8 s)"});const stop=card.getByRole("button",{name:"Stop",exact:true});const play=card.getByRole("button",{name:"Play on Echo"});
+ const record=card.getByRole("button",{name:"Start recording (8 s)"});const stop=card.getByRole("button",{name:"Stop",exact:true});const play=card.getByRole("button",{name:"Play on Echo"});
  assert(await play.isDisabled());
  await record.click();await page.getByRole("status").filter({hasText:"RECORDING"}).waitFor();assert(await record.isDisabled());assert(await play.isDisabled());
  await stop.click();await page.getByRole("status").filter({hasText:"Ready to play"}).waitFor();assert(await play.isEnabled());
@@ -49,12 +49,14 @@ try{
  await stop.click();await page.getByRole("status").filter({hasText:"Ready to play"}).waitFor();
  const gain=page.locator("#f-microphone_gain").getByRole("slider");await gain.focus();for(let i=0;i<4;i++) await gain.press("ArrowRight");await gain.press("Tab");await page.waitForTimeout(400);assert.equal(settingsValue,"14");
  await record.click();await page.getByRole("status").filter({hasText:"RECORDING"}).waitFor();
- await card.getByRole("button",{name:"Delete take"}).click();await page.getByRole("status").filter({hasText:"Ready to record"}).waitFor();
+ await stop.click();await page.getByRole("status").filter({hasText:"Ready to play"}).waitFor();
+ assert.equal(await card.getByRole("button").count(),3);
+ assert.equal(await card.getByRole("button",{name:"Delete take"}).count(),0);
  problem="muted";await record.click();await card.getByRole("alert").filter({hasText:"muted"}).waitFor();problem="";
  await record.click();await page.getByRole("status").filter({hasText:"RECORDING"}).waitFor();
  const before=actions.filter(a=>a==="discard").length;await page.evaluate(()=>{window.location.hash="system"});await card.waitFor({state:"detached"});await page.waitForTimeout(400);assert.equal(phase,"idle");assert.equal(actions.filter(a=>a==="discard").length,before+1);
  await page.evaluate(()=>{window.location.hash="volume"});await card.waitFor();
  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.documentElement.scrollWidth<=window.innerWidth);assert(await record.isEnabled());
  assert.deepEqual(errors,[]);
- console.log("PASS: discoverability, record/stop/play/delete, settings/repeat, mute error, page cleanup and mobile layout.");
+ console.log("PASS: discoverability, three direct buttons, record/stop/play, settings/repeat, mute error, automatic page cleanup and mobile layout.");
 }finally{await browser.close();server.close();}

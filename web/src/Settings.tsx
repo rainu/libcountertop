@@ -24,7 +24,6 @@ export function Settings({ section, focus, change, extra, services, microphoneTe
         <Title order={3}>{section.title}</Title>
       </Group>
       {extra}
-      {microphoneTest && section.groups.some(g => g.entries.some(e => e.domain === "microphone" && e.field.name === "gain")) && <MicrophoneTest key={section.slug} />}
       {section.groups.map((g, i) => (
         <Stack key={g.title} gap={6} id={groupID(section.slug, i)} style={{ scrollMarginTop: 72 }}>
           {g.service ? services?.[g.service] : <>
@@ -54,6 +53,7 @@ export function Settings({ section, focus, change, extra, services, microphoneTe
               </Fragment>
             ))}
           </Paper>
+          {microphoneTest && g.entries.some(e => e.domain === "microphone" && e.field.name === "gain") && <MicrophoneTest />}
           </>}
         </Stack>
       ))}

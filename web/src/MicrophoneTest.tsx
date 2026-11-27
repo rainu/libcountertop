@@ -44,10 +44,9 @@ export function MicrophoneTest() {
     {(error || state.error) && <Alert color="red" role="alert">{error || state.error}</Alert>}
     {active && !state.owned && <Alert>Another microphone test is active. Stop it on the page or device that started it.</Alert>}
     <Group>
-      <Button disabled={pending || active} onClick={() => void command("record")}>Record / replace take (8 s)</Button>
-      <Button variant="light" disabled={pending || !state.owned || !active} onClick={() => void command("stop")}>Stop</Button>
+      <Button disabled={pending || active} onClick={() => void command("record")}>Start recording (8 s)</Button>
       <Button variant="light" disabled={pending || !state.owned || state.phase !== "ready"} onClick={() => void command("play")}>Play on Echo</Button>
-      <Button variant="subtle" disabled={pending || !state.owned} onClick={() => void command("discard")}>Delete take</Button>
+      <Button variant="light" disabled={pending || !state.owned || !active} onClick={() => void command("stop")}>Stop</Button>
     </Group>
   </Stack></Paper>;
 }
