@@ -23,9 +23,25 @@ func TestConcurrentActionWrapperPreservesLiveEntityStates(t *testing.T) {
 	if err := ents.Add(player); err != nil {
 		t.Fatal(err)
 	}
+	receiptDelivered := make(chan bool, 1)
+	action := &esphome.Action{
+		Name:    "synthetic_transfer",
+		Answers: true,
+		Run: func(esphome.Call) (any, error) {
+			return &wireReceipt{delivered: receiptDelivered}, nil
+		},
+	}
+	if err := ents.AddActions(action); err != nil {
+		t.Fatal(err)
+	}
 	closed := make(chan struct{}, 1)
 	next := esphome.Chain(ents, &closedHandler{closed: closed})
-	h := &actionHandler{Entities: ents, next: next, slots: make(chan struct{}, 2)}
+	h := &actionHandler{
+		Entities: ents,
+		next:     next,
+		slots:    make(chan struct{}, 2),
+		actions:  deliveryActionMap([]*esphome.Action{action}, []string{action.Name}),
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -100,6 +116,37 @@ func TestConcurrentActionWrapperPreservesLiveEntityStates(t *testing.T) {
 	if _, ok := recv().(*api.HelloResponse); !ok {
 		t.Fatal("no hello")
 	}
+	// Use the key actually published by SDK discovery, not our own hash.
+	send(&api.ListEntitiesRequest{})
+	var discovered uint32
+discovery:
+	for {
+		switch m := recv().(type) {
+		case *api.ListEntitiesServicesResponse:
+			if m.Name == action.Name {
+				discovered = m.Key
+			}
+		case *api.ListEntitiesDoneResponse:
+			break discovery
+		}
+	}
+	if discovered == 0 {
+		t.Fatal("receipt-aware action not discovered")
+	}
+	send(&api.ExecuteServiceRequest{Key: discovered, CallId: 71, ReturnResponse: true})
+	answer, ok := recv().(*api.ExecuteServiceResponse)
+	if !ok || !answer.Success || answer.CallId != 71 ||
+		string(answer.ResponseData) != `{"accepted":true,"state":"accepted"}` {
+		t.Fatalf("correlated acceptance response missing: %v", answer)
+	}
+	select {
+	case delivered := <-receiptDelivered:
+		if !delivered {
+			t.Fatal("successful write cancelled receipt")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("receipt callback missing")
+	}
 	send(&api.SubscribeStatesRequest{})
 	initial, ok := recv().(*api.MediaPlayerStateResponse)
 	if !ok || initial.GetState() != esphome.MediaPlayerIdle {
@@ -129,3 +176,10 @@ func (h *closedHandler) ConnClosed(*esphome.Conn) {
 	default:
 	}
 }
+
+type wireReceipt struct{ delivered chan bool }
+
+func (*wireReceipt) MarshalJSON() ([]byte, error) {
+	return []byte(`{"accepted":true,"state":"accepted"}`), nil
+}
+func (r *wireReceipt) ActionResultDelivered(ok bool) { r.delivered <- ok }
