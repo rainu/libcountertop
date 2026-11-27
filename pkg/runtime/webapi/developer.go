@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	esphome "github.com/ygelfand/go-esphome-device"
+	"github.com/ygelfand/libcountertop/pkg/actions"
 
 	"github.com/ygelfand/libcountertop/pkg/android/logd"
 )
@@ -71,7 +73,27 @@ func (a *API) runAction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	reply(w, map[string]any{"answer": answer})
+	delivered := false
+	defer func() { actions.ResultDelivered(answer, delivered) }()
+	bodyJSON, err := json.Marshal(map[string]any{"answer": answer})
+	if err != nil {
+		http.Error(w, "encoding the answer failed", 500)
+		return
+	}
+	if r.Context().Err() != nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	n, err := w.Write(append(bodyJSON, '\n'))
+	if err == nil && n == len(bodyJSON)+1 {
+		// Flush buffered HTTP writes before admitting deferred work.
+		err = http.NewResponseController(w).Flush()
+		if errors.Is(err, http.ErrNotSupported) {
+			err = nil
+		}
+		delivered = err == nil && r.Context().Err() == nil
+	}
 }
 
 func (a *API) press(w http.ResponseWriter, r *http.Request) {

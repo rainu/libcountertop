@@ -45,14 +45,17 @@ type Identity struct {
 type Dependencies struct {
 	// ConcurrentActions opts into bounded non-blocking action dispatch (zero keeps legacy ordering).
 	ConcurrentActions int
-	KeyPath           string
-	DialPath          string
-	Identity          func() (Identity, error)
-	Bluetooth         func() esphome.BluetoothFeature
-	Registry          Registry
-	Adoption          Adoption
-	Logs              LogSource
-	OnSubscribed      func()
+	// DeliveryActions opts named actions into receipt-aware dispatch. Requires
+	// ConcurrentActions > 0; other actions retain the SDK execution path.
+	DeliveryActions []string
+	KeyPath         string
+	DialPath        string
+	Identity        func() (Identity, error)
+	Bluetooth       func() esphome.BluetoothFeature
+	Registry        Registry
+	Adoption        Adoption
+	Logs            LogSource
+	OnSubscribed    func()
 }
 
 type Server struct {
@@ -179,6 +182,7 @@ func (a *Server) register() error {
 			Entities: ents,
 			next:     a.srv.Handler,
 			slots:    make(chan struct{}, a.deps.ConcurrentActions),
+			actions:  deliveryActionMap(a.deps.Registry.Actions(), a.deps.DeliveryActions),
 		}
 	}
 	return nil
@@ -259,4 +263,24 @@ func (a *Server) subscribed() {
 	if a.deps.OnSubscribed != nil {
 		a.deps.OnSubscribed()
 	}
+}
+
+func actionMap(all []*esphome.Action) map[uint32]*esphome.Action {
+	out := make(map[uint32]*esphome.Action, len(all))
+	for _, a := range all {
+		out[actionKey(a.Name)] = a
+	}
+	return out
+}
+
+func deliveryActionMap(all []*esphome.Action, names []string) map[uint32]*esphome.Action {
+	out := map[uint32]*esphome.Action{}
+	for _, a := range all {
+		for _, name := range names {
+			if a.Name == name {
+				out[actionKey(a.Name)] = a
+			}
+		}
+	}
+	return out
 }
