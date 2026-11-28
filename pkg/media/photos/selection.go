@@ -33,7 +33,7 @@ func (s *Selection) Next() (Picture, bool) {
 		return s.library.Next()
 	}
 	feed := func() (Picture, bool) {
-		child := s.library.feedLibrary
+		child := s.library.feedSurfaces[s.consumer]
 		if child == nil {
 			return Picture{}, false
 		}

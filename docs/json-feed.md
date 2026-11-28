@@ -79,7 +79,9 @@ Image downloads have a 12 MiB cap, 15-second timeout, at most five redirects and
 8-megapixel/8192-pixel-axis decode ceiling. Images are then shrunk for the display.
 The normal bounded prefetch/cache and 12-picture navigation history are reused;
 videos are streamed/ranged by the existing player, not downloaded into this cache.
-The feed has its own cache and cursor, so existing provider order is not disturbed.
+The feed has a bounded cache and independent cursor for each of the app, wallpaper
+and screen saver, so they cannot consume each other's ranked items. Unselected
+wallpaper/saver feed sessions do not fetch. Existing provider order is not disturbed.
 
 Automatic refresh becomes eligible after 15 minutes but waits until the ranked
 traversal is drained; a long ranked list is never cut short by that timer.

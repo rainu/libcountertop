@@ -222,7 +222,7 @@ func TestJSONFeedWallpaperAndSaverNeverDecodeVideo(t *testing.T) {
 		c.WallpaperSource = schema.SourceFeed
 		c.SaverSource = schema.SourceFeed
 		l, _ := library(t, c, t.TempDir())
-		child := l.feedLibrary
+		child := l.feedSurfaces[consumer]
 		os.MkdirAll(child.o.Dir, 0700)
 		child.ready = []entry{{Source: "feed", ID: "video", URL: "https://example.com/v.mp4", MIME: "video/mp4"}, {Source: "feed", ID: "image"}}
 		if err := os.WriteFile(child.file(child.ready[1]), twoTone(8, 4), 0600); err != nil {
@@ -271,5 +271,32 @@ func TestUnsupportedOnlyFeedReportsPartialRatherThanHidingTheProblem(t *testing.
 	l.step(context.Background())
 	if l.State("feed").Status != FeedPartial {
 		t.Fatal("unsupported-only feed hid the reason")
+	}
+}
+
+func TestEachSurfaceRetainsTheWholeRankedFeed(t *testing.T) {
+	c := feedConfig("https://example.com/feed")
+	c.WallpaperSource = schema.SourceFeed
+	c.SaverSource = schema.SourceFeed
+	l, _ := library(t, c, t.TempDir())
+	for _, surface := range []string{"app", "wallpaper", "saver"} {
+		child := l.feedSurfaces[surface]
+		os.MkdirAll(child.o.Dir, 0700)
+		for i := range 3 {
+			e := entry{Source: "feed", ID: fmt.Sprint(i)}
+			child.ready = append(child.ready, e)
+			if err := os.WriteFile(child.file(e), twoTone(8, 4), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	sources := []*Selection{l.Source("app"), l.Source("wallpaper"), l.Source("saver")}
+	for i := range 3 {
+		for _, source := range sources {
+			p, ok := source.Next()
+			if !ok || p.ID != fmt.Sprint(i) {
+				t.Fatalf("%s lost a ranked item at %d", source.consumer, i)
+			}
+		}
 	}
 }

@@ -72,6 +72,7 @@ type Options struct {
 	Most      func() int
 	BytesMost int64
 	Ordered   bool
+	consumer  string
 }
 
 type entry struct {
@@ -100,10 +101,11 @@ type feed struct {
 }
 
 type Library struct {
-	o           Options
-	knobs       *Controls
-	feedLibrary *Library
-	feeds       []*feed
+	o            Options
+	knobs        *Controls
+	feedLibrary  *Library
+	feedSurfaces map[string]*Library
+	feeds        []*feed
 
 	mu    sync.Mutex
 	ready []entry
@@ -143,10 +145,16 @@ func New(o Options) *Library {
 	l.load()
 	if defaultProviders {
 		child := o
-		child.Dir = filepath.Join(o.Dir, "feed")
+		child.Dir = filepath.Join(o.Dir, "feed", "app")
 		child.Providers = []Provider{JSONFeed()}
 		child.Ordered = true
 		l.feedLibrary = New(child)
+		l.feedSurfaces = map[string]*Library{"app": l.feedLibrary}
+		for _, surface := range []string{"wallpaper", "saver"} {
+			child.Dir = filepath.Join(o.Dir, "feed", surface)
+			child.consumer = surface
+			l.feedSurfaces[surface] = New(child)
+		}
 	}
 	return l
 }
@@ -250,7 +258,13 @@ func (l *Library) Next() (Picture, bool) {
 func (l *Library) step(ctx context.Context) {
 	cfg := l.o.Settings.Read()
 	if l.feedLibrary != nil {
-		l.feedLibrary.step(ctx)
+		for _, surface := range []string{"app", "wallpaper", "saver"} {
+			l.feedSurfaces[surface].step(ctx)
+		}
+	}
+	if (l.o.consumer == "wallpaper" && (cfg.WallpaperSource == "" || cfg.WallpaperSource == schema.SourceExisting)) ||
+		(l.o.consumer == "saver" && (cfg.SaverSource == "" || cfg.SaverSource == schema.SourceExisting)) {
+		cfg.Feed.Enabled = false
 	}
 	for _, f := range l.feeds {
 		l.draw(ctx, f, cfg)
