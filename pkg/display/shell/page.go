@@ -80,6 +80,8 @@ type Action struct {
 	Glyph     string
 	Role      Role
 	Do        func()
+	// Enabled is evaluated when rendered and again before dispatch; nil means enabled.
+	Enabled func() bool
 }
 
 type Role int
@@ -99,3 +101,10 @@ func (p *Page) Opened() {
 }
 
 func (p *Page) Timeout() time.Duration { return SettingsTimeout }
+
+func (a Action) IsEnabled() bool { return a.Enabled == nil || a.Enabled() }
+func (a Action) Run() {
+	if a.IsEnabled() && a.Do != nil {
+		a.Do()
+	}
+}

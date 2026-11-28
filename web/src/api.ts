@@ -1,3 +1,4 @@
+export type MicrophoneTestState = { phase:string; seconds:number; owned:boolean; error?:string; processing?:string };
 export type SMBSettings = {enabled:boolean;host:string;port:number;share:string;username:string;domain:string};
 export type SMBView = SMBSettings & {password_set:boolean;labels:Record<string,string>};
 export type YouTubeConnection = { state: string; premium: boolean; code?: string; verification_url?: string; expires_at?: string; error?: string };
@@ -152,6 +153,8 @@ function post(path: string, body: unknown = {}) {
 }
 
 export const api = {
+ microphoneTest: (owner:string) => call<MicrophoneTestState>("/microphone-test/", {headers:{"X-Microphone-Test":owner}, signal:AbortSignal.timeout(5000)}),
+ microphoneTestCommand: (owner:string, action:string, keepalive=false) => call<MicrophoneTestState>("/microphone-test/", {...json({action}), headers:{"Content-Type":"application/json","X-Microphone-Test":owner}, keepalive, signal:AbortSignal.timeout(5000)}),
  smb: () => call<SMBView>("/smb/"),
  smbSave: (value:SMBSettings & {password?:string;clear_password?:boolean}) => call<object>("/smb/", {...json(value),method:"PUT"}),
  smbTest: (value:SMBSettings & {password?:string}) => call<{ok:boolean;code:string;message:string}>("/smb/test",json(value)),

@@ -155,15 +155,19 @@ func (kit *Toolkit) ActionBar(w *gogui.Window, actions []shell.Action, pal theme
 			fill = pal.Danger
 		}
 		cfg.Color, st.Color = Color(fill), Color(pal.Contrast(fill))
+		if !a.IsEnabled() {
+			cfg.Color = Color(pal.Background.Blend(pal.Text, 0.08))
+			st.Color = Color(pal.Background.Blend(pal.Text, 0.35))
+		}
 		if a.Glyph != "" {
 			mark := IconStyle(st.Color)
 			mark.Family = icons.Family
 			cfg.Content = append(cfg.Content, gogui.Label(icons.Glyph(icons.Named(a.Glyph)), mark))
 		}
 		cfg.Content = append(cfg.Content, gogui.Label(a.Label, st))
-		do := a.Do
+		action := a
 		content = append(content, kit.Pressable(gogui.Row, cfg, func(e gogui.EventCtx) {
-			do()
+			action.Run()
 			e.Window.InvalidateLayout()
 		}))
 	}
