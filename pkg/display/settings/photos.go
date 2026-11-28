@@ -87,7 +87,8 @@ func (p *BasicPages) Photos() *shell.Page {
 					continue
 				}
 				name := field
-				rows = append(rows, menu.Row{Label: s.Title(), Kind: menu.Chevron, Value: s.LabelOf(func() string { at := c.Read(); return s.Read(&at) }())})
+				at := c.Read()
+				rows = append(rows, menu.Row{Label: s.Title(), Kind: menu.Chevron, Value: s.LabelOf(s.Read(&at))})
 				acts = append(acts, p.open(func() shell.View {
 					return Choose(s.Title(), config.PhotoSources(), func() config.PhotoSource {
 						at := c.Read()

@@ -404,7 +404,7 @@ func (l *Library) settle(f *feed) {
 			st.Status, st.Missing = FeedPartial, note
 		}
 	}
-	if len(f.deck) == 0 && !slices.ContainsFunc(l.ready, func(e entry) bool {
+	if st.Status == Ready && len(f.deck) == 0 && !slices.ContainsFunc(l.ready, func(e entry) bool {
 		return e.Source == f.p.Key()
 	}) {
 		st.Status = Empty

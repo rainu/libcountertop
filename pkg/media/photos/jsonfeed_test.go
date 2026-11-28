@@ -261,3 +261,15 @@ func TestJSONFeedDefaultDoesNotMixAndMixedKeepsFeedOrder(t *testing.T) {
 		t.Fatalf("rank lost: %v", ranked)
 	}
 }
+
+func TestUnsupportedOnlyFeedReportsPartialRatherThanHidingTheProblem(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"version":"https://jsonfeed.org/version/1.1","title":"Unsupported","items":[{"id":"1","attachments":[{"url":"https://example.com/a.gif","mime_type":"image/gif"}]}]}`))
+	}))
+	defer srv.Close()
+	l, _ := library(t, feedConfig(srv.URL), t.TempDir())
+	l.step(context.Background())
+	if l.State("feed").Status != FeedPartial {
+		t.Fatal("unsupported-only feed hid the reason")
+	}
+}
