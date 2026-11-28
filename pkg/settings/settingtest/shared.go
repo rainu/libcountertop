@@ -11,6 +11,12 @@ var Shared = Coverage{
 		"Voice.Off":            {"voice.action.", "voice.command."},
 	},
 	Rows: map[string]string{
+		"Photos.Feed.Enabled":       "photos.feed.enabled",
+		"Photos.Feed.URL":           "photos.feed.url",
+		"Photos.Feed.Refresh":       "photos.feed.refresh",
+		"Photos.AppSource":          "photos.app.source",
+		"Photos.WallpaperSource":    "photos.wallpaper.source",
+		"Photos.SaverSource":        "photos.saver.source",
 		"Feedback.Chime":            "feedback.chime",
 		"Feedback.Failure":          "feedback.failure",
 		"Feedback.Cancel":           "feedback.cancel",

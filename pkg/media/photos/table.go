@@ -12,6 +12,7 @@ const (
 	Group       setting.Group = "Photos"
 	ImmichGroup setting.Group = "Immich"
 	GoogleGroup setting.Group = "Google"
+	FeedGroup   setting.Group = "Feed"
 )
 
 const (
@@ -32,7 +33,22 @@ func NewTable() *Table {
 		func(c *schema.Photos) *string { return &c.Immich.Key },
 	)
 	key.Kind = setting.Secret
+	feedURL := setting.Words(Setting{Name: "feed.url", Group: FeedGroup, Icon: "mdi:link-variant"}, listMost, func(c *schema.Photos) *string { return &c.Feed.URL })
+	feedURL.Kind = setting.Secret
+	writeURL := feedURL.Write
+	feedURL.Write = func(c *schema.Photos, v string) error {
+		if v != "" && !validFeedURL(v) {
+			return fmt.Errorf("use an absolute HTTP(S) feed URL without user information")
+		}
+		return writeURL(c, v)
+	}
 	rows := []Setting{
+		setting.Flag(Setting{Name: "feed.enabled", Group: FeedGroup, Icon: "mdi:rss"}, func(c *schema.Photos) *bool { return &c.Feed.Enabled }),
+		feedURL,
+		setting.Flag(Setting{Name: "feed.refresh", Group: FeedGroup, Icon: "mdi:refresh"}, func(c *schema.Photos) *bool { return &c.Feed.Refresh }),
+		setting.Pick(Setting{Name: "app.source", Group: Group, Icon: "mdi:image-multiple"}, schema.PhotoSources(), func(c *schema.Photos) *schema.PhotoSource { return &c.AppSource }),
+		setting.Pick(Setting{Name: "wallpaper.source", Group: Group, Icon: "mdi:image"}, schema.PhotoSources(), func(c *schema.Photos) *schema.PhotoSource { return &c.WallpaperSource }),
+		setting.Pick(Setting{Name: "saver.source", Group: Group, Icon: "mdi:image"}, schema.PhotoSources(), func(c *schema.Photos) *schema.PhotoSource { return &c.SaverSource }),
 		setting.Pick(
 			Setting{Name: "app.every", Group: Group, Icon: "mdi:image-sync"},
 			schema.PhotoAppSpans(),
@@ -106,6 +122,6 @@ func NewTable() *Table {
 			}, func(c *schema.Photos) *int { return &album(c).Weight }),
 		)
 	}
-	return setting.NewTable("photos", []setting.Group{Group, ImmichGroup, GoogleGroup}, rows,
+	return setting.NewTable("photos", []setting.Group{Group, ImmichGroup, GoogleGroup, FeedGroup}, rows,
 		setting.Messages{Text: say.T, Missing: say.Missing})
 }

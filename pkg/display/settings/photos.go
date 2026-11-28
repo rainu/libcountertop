@@ -81,6 +81,20 @@ func (p *BasicPages) Photos() *shell.Page {
 					slog.Error("saving a setting failed", "setting", "photos."+name, "err", err)
 				}
 			}
+			for _, field := range []string{"app.source", "wallpaper.source", "saver.source"} {
+				s, ok := c.Table.Find(field)
+				if !ok {
+					continue
+				}
+				name := field
+				rows = append(rows, menu.Row{Label: s.Title(), Kind: menu.Chevron, Value: s.LabelOf(func() string { at := c.Read(); return s.Read(&at) }())})
+				acts = append(acts, p.open(func() shell.View {
+					return Choose(s.Title(), config.PhotoSources(), func() config.PhotoSource {
+						at := c.Read()
+						return config.PhotoSource(s.Read(&at))
+					}, func(v config.PhotoSource) { change(name, string(v)) }, nil)
+				}))
+			}
 			spans := config.PhotoAppSpans()
 			app := menu.Steps(len(spans))
 			now := c.Read().AppEvery

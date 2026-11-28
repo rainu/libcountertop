@@ -23,6 +23,8 @@ type Session interface {
 }
 
 type Found struct {
+	URL    string
+	MIME   string
 	ID     string
 	Taken  string
 	Place  string

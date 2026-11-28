@@ -2065,3 +2065,26 @@ features.youtube.hint: YouTube-Konto verbinden
 
 features.smb: SMB-Netzwerkvideos
 features.smb.hint: SMB 2/3
+
+# Generic JSON Feed media source
+photos.group.feed: "JSON Feed"
+photos.setting.feed.enabled: "JSON Feed aktivieren"
+photos.setting.feed.url: "Feed-URL (verborgen)"
+photos.setting.feed.refresh: "Feed neu laden (umschalten)"
+photos.help.feed.refresh: "Jeder Wechsel startet die Rangliste neu und erneuert Medienlinks. Automatisch alle 15 Minuten."
+photos.setting.app.source: "Quellen der Fotos-App"
+photos.setting.wallpaper.source: "Hintergrundquellen"
+photos.setting.saver.source: "Bildschirmschonerquellen"
+photos.entity.feed.enabled: "JSON Feed enabled"
+photos.entity.feed.url: "JSON Feed URL"
+photos.entity.feed.refresh: "JSON Feed refresh"
+photos.entity.app.source: "Photos app sources"
+photos.entity.wallpaper.source: "Wallpaper sources"
+photos.entity.saver.source: "Screen saver sources"
+photos.status.feed_invalid: "Ungültiger JSON Feed 1.1. Format und URL prüfen."
+photos.status.feed_partial: "Links übersprungen oder Grenze erreicht. MIME-Typen prüfen, abgelaufene Links neu laden."
+photos.feed.play: "Video abspielen"
+photos.feed.no_player: "Videowiedergabe nicht verfügbar"
+photos.source.existing: "Immich / Google Fotos"
+photos.source.feed: "JSON Feed"
+photos.source.mixed: "Bisherige + JSON Feed"

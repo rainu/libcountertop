@@ -39,6 +39,8 @@ const (
 	Unknown
 	Empty
 	NoPermission
+	FeedInvalid
+	FeedPartial
 )
 
 type State struct {
@@ -48,6 +50,8 @@ type State struct {
 }
 
 type Picture struct {
+	URL    string
+	MIME   string
 	ID     string
 	Source string
 	Data   []byte
@@ -67,9 +71,12 @@ type Options struct {
 	Providers []Provider
 	Most      func() int
 	BytesMost int64
+	Ordered   bool
 }
 
 type entry struct {
+	URL    string   `json:"url,omitempty"`
+	MIME   string   `json:"mime,omitempty"`
 	Source string   `json:"source"`
 	ID     string   `json:"id"`
 	Taken  string   `json:"taken,omitempty"`
@@ -93,9 +100,10 @@ type feed struct {
 }
 
 type Library struct {
-	o     Options
-	knobs *Controls
-	feeds []*feed
+	o           Options
+	knobs       *Controls
+	feedLibrary *Library
+	feeds       []*feed
 
 	mu    sync.Mutex
 	ready []entry
@@ -109,6 +117,7 @@ func New(o Options) *Library {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
+	defaultProviders := o.Providers == nil
 	if o.Providers == nil {
 		o.Providers = []Provider{Immich(), Google(o.Most)}
 	}
@@ -132,6 +141,13 @@ func New(o Options) *Library {
 		}}})
 	}
 	l.load()
+	if defaultProviders {
+		child := o
+		child.Dir = filepath.Join(o.Dir, "feed")
+		child.Providers = []Provider{JSONFeed()}
+		child.Ordered = true
+		l.feedLibrary = New(child)
+	}
 	return l
 }
 
@@ -142,15 +158,29 @@ func (l *Library) Entities() []esphome.Entity {
 	for _, f := range l.feeds {
 		out = append(out, f.sensor)
 	}
+	if l.feedLibrary != nil {
+		for _, f := range l.feedLibrary.feeds {
+			out = append(out, f.sensor)
+		}
+	}
 	return out
 }
 
 func (l *Library) Settings() *Controls { return l.knobs }
 
-func (l *Library) Providers() []Provider { return slices.Clone(l.o.Providers) }
+func (l *Library) Providers() []Provider {
+	out := slices.Clone(l.o.Providers)
+	if l.feedLibrary != nil {
+		out = append(out, l.feedLibrary.o.Providers...)
+	}
+	return out
+}
 
 func (l *Library) Restore(c schema.Photos) {
 	l.knobs.PublishFrom(c)
+	if l.feedLibrary != nil {
+		l.feedLibrary.Restore(c)
+	}
 	for _, f := range l.feeds {
 		f.sensor.Set(l.State(f.p.Key()).Says())
 	}
@@ -170,6 +200,9 @@ func (l *Library) Run(ctx context.Context) error {
 }
 
 func (l *Library) State(key string) State {
+	if key == "feed" && l.feedLibrary != nil {
+		return l.feedLibrary.State(key)
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	for _, f := range l.feeds {
@@ -182,7 +215,7 @@ func (l *Library) State(key string) State {
 
 func (l *Library) Next() (Picture, bool) {
 	l.mu.Lock()
-	if len(l.ready) == 0 {
+	if len(l.ready) == 0 || (l.o.Ordered && l.next >= len(l.ready)) {
 		l.mu.Unlock()
 		return Picture{}, false
 	}
@@ -190,7 +223,11 @@ func (l *Library) Next() (Picture, bool) {
 	l.next++
 	l.mu.Unlock()
 
-	data, err := os.ReadFile(l.file(e))
+	var data []byte
+	var err error
+	if e.URL == "" {
+		data, err = os.ReadFile(l.file(e))
+	}
 	if err != nil {
 		slog.Warn("reading a cached photo failed", "asset", e.ID, "err", err)
 		l.forget(e)
@@ -198,6 +235,7 @@ func (l *Library) Next() (Picture, bool) {
 	}
 	taken, _ := time.Parse(time.RFC3339, e.Taken)
 	return Picture{
+		URL: e.URL, MIME: e.MIME,
 		ID:     e.ID,
 		Source: e.Source,
 		Data:   data,
@@ -211,6 +249,9 @@ func (l *Library) Next() (Picture, bool) {
 
 func (l *Library) step(ctx context.Context) {
 	cfg := l.o.Settings.Read()
+	if l.feedLibrary != nil {
+		l.feedLibrary.step(ctx)
+	}
 	for _, f := range l.feeds {
 		l.draw(ctx, f, cfg)
 	}
@@ -247,7 +288,14 @@ func (l *Library) draw(ctx context.Context, f *feed, cfg schema.Photos) {
 	}
 	l.mu.Lock()
 	low := len(f.deck) < l.o.Keep
+	drained := l.next >= len(l.ready) && len(f.deck) == 0
 	l.mu.Unlock()
+	if s, ok := f.session.(interface{ RefreshDue(time.Time) bool }); ok && drained && s.RefreshDue(l.o.Now()) {
+		l.restart(f, cfg)
+		l.drop(f.p.Key())
+		l.set(f, State{Status: Connecting})
+		return
+	}
 	front, back, err := f.session.Draw(ctx, l.o.Now(), low)
 	if err != nil {
 		l.fail(f, err)
@@ -268,6 +316,7 @@ func (l *Library) draw(ctx context.Context, f *feed, cfg schema.Photos) {
 		for _, x := range in {
 			e := entry{
 				Source: f.p.Key(),
+				URL:    x.URL, MIME: x.MIME,
 				ID:     x.ID,
 				Taken:  x.Taken,
 				Place:  x.Place,
@@ -309,14 +358,14 @@ func (l *Library) prefetch(ctx context.Context) {
 		turn++
 
 		data, err := f.session.Fetch(ctx, e.ID)
-		if err == nil && l.o.Most != nil {
+		if err == nil && e.URL == "" && l.o.Most != nil {
 			data = shrink(data, l.o.Most())
 		}
 		if err == nil {
 			err = os.MkdirAll(l.o.Dir, 0o755)
 		}
-		if err == nil {
-			err = os.WriteFile(l.file(e), data, 0o644)
+		if err == nil && e.URL == "" {
+			err = os.WriteFile(l.file(e), data, 0o600)
 		}
 		if errors.Is(err, ErrGone) {
 			slog.Warn("photos: skipping a photo", "source", f.p.Key(), "asset", e.ID, "err", err)
@@ -350,6 +399,11 @@ func (l *Library) settle(f *feed) {
 		return
 	}
 	st := State{Status: Ready, Version: f.version}
+	if s, ok := f.session.(interface{ Notice() string }); ok {
+		if note := s.Notice(); note != "" {
+			st.Status, st.Missing = FeedPartial, note
+		}
+	}
 	if len(f.deck) == 0 && !slices.ContainsFunc(l.ready, func(e entry) bool {
 		return e.Source == f.p.Key()
 	}) {
@@ -421,6 +475,9 @@ func (l *Library) fail(f *feed, err error) {
 	l.mu.Lock()
 	f.failed = l.o.Now()
 	f.session = nil
+	if l.o.Ordered {
+		f.deck = nil
+	}
 	version := f.version
 	l.mu.Unlock()
 	var (
@@ -429,6 +486,8 @@ func (l *Library) fail(f *feed, err error) {
 		perm    *PermissionError
 	)
 	switch {
+	case errors.Is(err, errFeedInvalid):
+		l.set(f, State{Status: FeedInvalid})
 	case errors.As(err, &old):
 		l.set(f, State{Status: TooOld, Version: old.Version})
 	case errors.As(err, &perm):
@@ -471,6 +530,10 @@ func (st State) Says() string {
 		return say.F("photos.status.unknown", map[string]any{"Name": st.Missing})
 	case Empty:
 		return say.T("photos.status.empty")
+	case FeedInvalid:
+		return say.T("photos.status.feed_invalid")
+	case FeedPartial:
+		return say.T("photos.status.feed_partial")
 	case NoPermission:
 		return say.F("photos.status.permission", map[string]any{"Name": st.Missing})
 	}
@@ -505,7 +568,7 @@ func (l *Library) load() {
 		if e.Source == "" {
 			continue
 		}
-		if st, err := os.Stat(l.file(e)); err == nil {
+		if st, err := os.Stat(l.file(e)); err == nil && e.URL == "" {
 			e.Size = st.Size()
 			l.ready = append(l.ready, e)
 			kept[filepath.Base(l.file(e))] = true
@@ -521,7 +584,11 @@ func (l *Library) load() {
 
 func (l *Library) save() {
 	l.mu.Lock()
-	data, err := json.Marshal(l.ready)
+	saved := l.ready
+	if l.o.Ordered {
+		saved = nil
+	}
+	data, err := json.Marshal(saved)
 	l.mu.Unlock()
 	if err != nil {
 		return

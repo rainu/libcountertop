@@ -2,15 +2,20 @@ package schema
 
 import (
 	"encoding/json"
+	"github.com/ygelfand/libcountertop/pkg/say"
 	"strings"
 )
 
 type Photos struct {
-	AppEvery  Delay           `json:"app_every"`
-	AppFit    PhotoFit        `json:"app_fit"`
-	AppChange PhotoTransition `json:"app_transition"`
-	Immich    Immich          `json:"immich"`
-	Google    Google          `json:"google"`
+	AppEvery        Delay           `json:"app_every"`
+	AppFit          PhotoFit        `json:"app_fit"`
+	AppChange       PhotoTransition `json:"app_transition"`
+	Immich          Immich          `json:"immich"`
+	Google          Google          `json:"google"`
+	Feed            JSONFeed        `json:"feed"`
+	AppSource       PhotoSource     `json:"app_source"`
+	WallpaperSource PhotoSource     `json:"wallpaper_source"`
+	SaverSource     PhotoSource     `json:"saver_source"`
 }
 
 const (
@@ -18,6 +23,32 @@ const (
 	GoogleWeightMost  = 10
 	GoogleWeightStart = 5
 )
+
+// PhotoSource's zero value preserves the original Immich/Google selection.
+type PhotoSource string
+
+const (
+	SourceExisting PhotoSource = "existing"
+	SourceFeed     PhotoSource = "feed"
+	SourceMixed    PhotoSource = "mixed"
+)
+
+func PhotoSources() []PhotoSource { return []PhotoSource{SourceExisting, SourceFeed, SourceMixed} }
+func (s PhotoSource) Label() string {
+	switch s {
+	case SourceFeed:
+		return say.T("photos.source.feed")
+	case SourceMixed:
+		return say.T("photos.source.mixed")
+	}
+	return say.T("photos.source.existing")
+}
+
+type JSONFeed struct {
+	Enabled bool   `json:"enabled"`
+	URL     string `json:"url"`
+	Refresh bool   `json:"refresh"` // Each change explicitly restarts the feed.
+}
 
 type Google struct {
 	Enabled bool                      `json:"enabled"`
@@ -43,6 +74,7 @@ type Immich struct {
 
 func DefaultPhotos() Photos {
 	p := Photos{
+		AppSource: SourceExisting, WallpaperSource: SourceExisting, SaverSource: SourceExisting,
 		AppEvery:  Delay15s,
 		AppFit:    FitKenBurns,
 		AppChange: TransitionFade,

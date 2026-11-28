@@ -2037,3 +2037,26 @@ features.youtube.hint: Kết nối tài khoản YouTube
 
 features.smb: Video mạng SMB
 features.smb.hint: SMB 2/3
+
+# Generic JSON Feed media source
+photos.group.feed: "JSON Feed"
+photos.setting.feed.enabled: "Enable JSON Feed"
+photos.setting.feed.url: "Feed URL (hidden)"
+photos.setting.feed.refresh: "Refresh feed (toggle)"
+photos.help.feed.refresh: "Changing either direction restarts the ranked list and renews media links. Automatic refresh: 15 minutes."
+photos.setting.app.source: "Photos app sources"
+photos.setting.wallpaper.source: "Wallpaper sources"
+photos.setting.saver.source: "Screen saver sources"
+photos.entity.feed.enabled: "JSON Feed enabled"
+photos.entity.feed.url: "JSON Feed URL"
+photos.entity.feed.refresh: "JSON Feed refresh"
+photos.entity.app.source: "Photos app sources"
+photos.entity.wallpaper.source: "Wallpaper sources"
+photos.entity.saver.source: "Screen saver sources"
+photos.status.feed_invalid: "Invalid JSON Feed 1.1. Check format and URL."
+photos.status.feed_partial: "Some links were skipped or a limit reached. Check MIME types and refresh expired links."
+photos.feed.play: "Play video"
+photos.feed.no_player: "Video playback unavailable"
+photos.source.existing: "Immich / Google Photos"
+photos.source.feed: "JSON Feed"
+photos.source.mixed: "Existing + JSON Feed"

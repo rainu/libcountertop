@@ -71,7 +71,7 @@ func (f *Frame) Next(now time.Time) bool {
 	if !ok {
 		return false
 	}
-	img, err := f.decode(pic.Data)
+	img, err := f.decodePicture(pic)
 	if err != nil {
 		slog.Warn("decoding a photo failed", "frame", f.name, "photo", pic.ID, "err", err)
 		return false
@@ -138,7 +138,7 @@ func (f *Frame) Current() (Shot, bool) {
 }
 
 func (f *Frame) show(pic photos.Picture, at int, now time.Time) bool {
-	img, err := f.decode(pic.Data)
+	img, err := f.decodePicture(pic)
 	if err != nil {
 		slog.Warn("decoding a photo failed", "frame", f.name, "photo", pic.ID, "err", err)
 		return false
@@ -160,6 +160,13 @@ func (f *Frame) aim(most int) {
 	f.mu.Lock()
 	f.most = most
 	f.mu.Unlock()
+}
+
+func (f *Frame) decodePicture(pic photos.Picture) (image.Image, error) {
+	if pic.URL != "" {
+		return image.NewRGBA(image.Rect(0, 0, 32, 18)), nil
+	}
+	return f.decode(pic.Data)
 }
 
 func (f *Frame) decode(data []byte) (image.Image, error) {

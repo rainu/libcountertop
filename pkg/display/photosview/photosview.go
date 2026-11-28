@@ -1,6 +1,7 @@
 package photosview
 
 import (
+	"github.com/ygelfand/libcountertop/pkg/media/photos"
 	"sync/atomic"
 	"time"
 
@@ -26,12 +27,13 @@ const (
 )
 
 type Options struct {
-	Shell    *shell.Shell
-	Photos   photoframe.Source
-	Settings storage.Section[schema.Photos]
-	Page     func() shell.View
-	GPU      *gpu.Renderer
-	Display  photoframe.Display
+	Shell     *shell.Shell
+	Photos    photoframe.Source
+	Settings  storage.Section[schema.Photos]
+	Page      func() shell.View
+	GPU       *gpu.Renderer
+	Display   photoframe.Display
+	PlayVideo func(photos.Picture) error
 }
 
 // A nonzero-sized identity is required: pointers to empty structs may alias.
@@ -95,7 +97,8 @@ func (v *View) run() {
 		if !v.o.Shell.Visible(v.app) {
 			return
 		}
-		if every := v.o.Settings.Read().AppEvery.After(); every > 0 {
+		pic, _ := v.frame.Showing()
+		if every := v.o.Settings.Read().AppEvery.After(); every > 0 && pic.URL == "" {
 			if now := time.Now(); v.frame.Due(now, every) {
 				v.frame.Next(now)
 			}
@@ -134,6 +137,22 @@ func (v *View) build(w *gogui.Window) gogui.View {
 		}
 		v.frame.Previous(time.Now())
 	})...)
+	if pic, ok := v.frame.Showing(); ok && pic.URL != "" {
+		label := say.T("photos.feed.play")
+		if v.o.PlayVideo == nil {
+			label = say.T("photos.feed.no_player")
+		}
+		content = append(content, widgets.Placed(ui.Rect{X: vw / 4, Y: vh / 3, W: vw / 2, H: vh / 3},
+			v.presses.Pressable(gogui.Column, gogui.ContainerCfg{
+				ID: "photos-feed-play", Sizing: gogui.FillFill, HAlign: gogui.HAlignCenter, VAlign: gogui.VAlignMiddle,
+				Content: []gogui.View{gogui.Label(label, widgets.Secondary())},
+			}, func(e gogui.EventCtx) {
+				if v.o.PlayVideo != nil {
+					_ = v.o.PlayVideo(pic)
+				}
+				e.Consume()
+			})))
+	}
 	level := v.o.Shell.Controls()
 	if _, ok := v.frame.Current(); !ok {
 		level = 1
